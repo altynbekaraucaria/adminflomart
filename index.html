@@ -10,7 +10,7 @@
 :root{
   --plum:#3D2B3D;--plum-light:#6B4E6B;--rose:#F2C4CE;
   --cream:#FDF8F5;--soft:#F8F3F8;--border:rgba(61,43,61,0.12);
-  --muted:#8A6E8A;--green:#4CAF50;--red:#E57373;--blue:#5B9BD5
+  --muted:#8A6E8A;--green:#4CAF50;--red:#E57373;--blue:#5B9BD5;--sale:#D9426B
 }
 body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min-height:100vh}
 .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
@@ -288,6 +288,21 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
         </label>
       </div>
       <div id="price-breakdown" class="price-breakdown" style="display:none"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px">
+        🏷️ Акционная цена <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(необязательно — если заполнено и меньше обычной цены, букет попадёт в блок «Акции» на сайте)</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input class="form-input" id="bq-sale-price" type="number" placeholder="Например: 15900" style="max-width:180px">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('bq-sale-price').value=''" style="white-space:nowrap">✕ Убрать акцию</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px">
+        🎁 Текст комбо-предложения <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(необязательно — короткая подпись вроде «+ бенто-торт в подарок» или «+ клубника со скидкой −30%»; тоже включает букет в блок «Акции», даже без акционной цены)</span>
+      </label>
+      <input class="form-input" id="bq-combo-label" placeholder="Например: + Бенто-торт в подарок">
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-bouquet')">Отмена</button>
@@ -734,19 +749,25 @@ function bqCards(list) {
     const price = getPrice(b);
     const autoHidden = hasHiddenIngredient(b);
     const isHidden = !!b.hidden || autoHidden;
+    const onSale = (b.salePrice && b.salePrice < b.price) || b.comboLabel;
     const fz = b.photoZoom || 1, fx = b.photoPosX != null ? b.photoPosX : 50, fy = b.photoPosY != null ? b.photoPosY : 50;
     const img = b.photoUrl
       ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy" style="object-position:${fx}% ${fy}%;transform:scale(${fz});transform-origin:${fx}% ${fy}%;">`
       : `<div style="font-size:40px;z-index:1">${catEmoji(b.category)}</div>`;
-    return `<div class="bq-card" style="${isHidden?'opacity:.55':''}" draggable="true" data-idx="${i}"
+    const hasSalePrice = b.salePrice && b.salePrice < price;
+    return `<div class="bq-card" style="${isHidden?'opacity:.55;':''}${onSale?'border:2px solid var(--sale);box-shadow:0 6px 20px rgba(217,66,107,0.22);':''}" draggable="true" data-idx="${i}"
       ondragstart="bqCardDragStart(event,${i})" ondragover="bqCardDragOver(event,${i})"
       ondragleave="bqCardDragLeave(event)" ondrop="bqCardDrop(event,${i})" ondragend="bqCardDragEnd(event)"
       title="Перетащите, чтобы изменить порядок на сайте">
-      <div class="bq-img" onclick="openBq('${b.id}')">${img}<div class="bq-img-overlay">✏️ Редактировать</div></div>
+      <div class="bq-img" onclick="openBq('${b.id}')">${img}<div class="bq-img-overlay">✏️ Редактировать</div>${onSale?`<div style="position:absolute;top:8px;left:8px;background:var(--sale);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;box-shadow:0 3px 10px rgba(217,66,107,0.35);z-index:2">${hasSalePrice&&b.comboLabel?'🏷️🎁 Акция':hasSalePrice?'🏷️ Акция':'🎁 Комбо'}</div>`:''}</div>
       <div class="bq-body">
         <div class="bq-code">${b.code||''} · ${catLabel(b.category)} ${isHidden?`<span class="tag tag-blue" style="margin-left:4px">🙈 ${autoHidden?'скрыт (цветок скрыт)':'скрыт'}</span>`:''}</div>
         <div class="bq-name">${b.name||'Без названия'}</div>
-        <div class="bq-price">${price ? price.toLocaleString('ru') : '—'} <span style="font-size:12px;font-family:Inter;color:var(--muted)">тг</span>${b.autoPrice?'<span class="bq-auto">⟳ авто</span>':''}</div>
+        <div class="bq-price">${hasSalePrice
+          ? `<span style="text-decoration:line-through;text-decoration-color:var(--sale);color:var(--muted);font-size:14px;margin-right:6px">${price.toLocaleString('ru')}</span><span style="color:var(--sale);font-weight:700;font-size:20px">${b.salePrice.toLocaleString('ru')}</span> <span style="font-size:12px;font-family:Inter;color:var(--sale);opacity:.75">тг</span>`
+          : `${price ? price.toLocaleString('ru') : '—'} <span style="font-size:12px;font-family:Inter;color:var(--muted)">тг</span>`
+        }${b.autoPrice?'<span class="bq-auto">⟳ авто</span>':''}</div>
+        ${b.comboLabel?`<div style="font-size:12px;color:var(--sale);font-weight:500;margin-top:2px">🎁 ${b.comboLabel}</div>`:''}
         <div class="bq-actions">
           <button class="btn btn-outline btn-sm btn-edit" onclick="openBq('${b.id}')">✏️ Изменить</button>
           <div class="bq-actions-row2">
@@ -963,6 +984,8 @@ window.openBq = function(id) {
   document.getElementById('bq-name-en').value = b?.nameEn || '';
   document.getElementById('bq-desc-en').value = b?.descEn || '';
   document.getElementById('bq-price').value = b?.price || '';
+  document.getElementById('bq-sale-price').value = b?.salePrice || '';
+  document.getElementById('bq-combo-label').value = b?.comboLabel || '';
   document.getElementById('bq-auto-price').checked = !!b?.autoPrice;
   if (state.categories.length) {
     const catSel = document.getElementById('bq-category');
@@ -1134,6 +1157,8 @@ window.saveBouquet = async function() {
       descEn: document.getElementById('bq-desc-en').value.trim(),
       category: document.getElementById('bq-category').value,
       price: parseInt(document.getElementById('bq-price').value) || 0,
+      salePrice: parseInt(document.getElementById('bq-sale-price').value) || 0,
+      comboLabel: document.getElementById('bq-combo-label').value.trim(),
       autoPrice: auto,
       ingredients: ingredientRows.filter(r => r.flowerId),
       photoZoom: (parseInt(document.getElementById('bq-frame-zoom').value) || 100) / 100,
