@@ -228,11 +228,48 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     <div class="form-group"><label class="form-label">Название</label><input class="form-input" id="bq-name" placeholder="Букет А2"></div>
     <div class="form-group"><label class="form-label">Описание (видно клиенту)</label><textarea class="form-textarea" id="bq-desc" placeholder="Нежный сборный букет…"></textarea></div>
     <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Название (English) <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">— для англоязычной версии сайта</span></span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="autoTranslate('bq-name','bq-name-en',this)" style="font-size:11px;padding:4px 10px;white-space:nowrap">✨ Перевести</button>
+      </label>
+      <input class="form-input" id="bq-name-en" placeholder="Bouquet A2">
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Описание (English)</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="autoTranslate('bq-desc','bq-desc-en',this)" style="font-size:11px;padding:4px 10px;white-space:nowrap">✨ Перевести</button>
+      </label>
+      <textarea class="form-textarea" id="bq-desc-en" placeholder="Delicate mixed bouquet…"></textarea>
+    </div>
+    <div class="form-group">
       <label class="form-label" style="display:flex;align-items:center;gap:8px">
         Фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(до 5 шт. — перетаскивайте мышкой, чтобы поменять порядок; первое фото — главное на сайте)</span>
       </label>
       <div id="bq-photos-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
       <input type="file" id="bq-file" accept="image/*" multiple style="display:none" onchange="handleBqPhotos(this)">
+    </div>
+    <div class="form-group" id="bq-frame-group" style="display:none">
+      <label class="form-label">Кадрирование главного фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(так фото будет обрезано в карточке на сайте — если вокруг букета слишком много фона, приблизьте и сдвиньте)</span></label>
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:8px">
+        <div id="bq-frame-preview" style="width:130px;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--soft);position:relative;flex-shrink:0">
+          <img id="bq-frame-preview-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+        </div>
+        <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px">
+          <div>
+            <label style="font-size:11px;color:var(--muted)">Масштаб</label>
+            <input type="range" id="bq-frame-zoom" min="100" max="250" value="100" oninput="updateBqFrame()" style="width:100%">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted)">По горизонтали</label>
+            <input type="range" id="bq-frame-x" min="0" max="100" value="50" oninput="updateBqFrame()" style="width:100%">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted)">По вертикали</label>
+            <input type="range" id="bq-frame-y" min="0" max="100" value="50" oninput="updateBqFrame()" style="width:100%">
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="resetBqFrame()" style="align-self:flex-start">↺ Сбросить</button>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label" style="display:flex;align-items:center;gap:8px">
@@ -300,6 +337,20 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     <h2 class="modal-title" id="modal-cake-title">Бенто-торт</h2>
     <div class="form-group"><label class="form-label">Название / дизайн</label><input class="form-input" id="ck-name" placeholder="Дизайн №1 — Цветочный"></div>
     <div class="form-group"><label class="form-label">Описание</label><textarea class="form-textarea" id="ck-desc" placeholder="Нежный авторский торт с цветочным декором"></textarea></div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Название (English)</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="autoTranslate('ck-name','ck-name-en',this)" style="font-size:11px;padding:4px 10px;white-space:nowrap">✨ Перевести</button>
+      </label>
+      <input class="form-input" id="ck-name-en" placeholder="Design #1 — Floral">
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Описание (English)</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="autoTranslate('ck-desc','ck-desc-en',this)" style="font-size:11px;padding:4px 10px;white-space:nowrap">✨ Перевести</button>
+      </label>
+      <textarea class="form-textarea" id="ck-desc-en" placeholder="A delicate signature cake with floral decor"></textarea>
+    </div>
     <div class="form-group"><label class="form-label">Начинка</label><input class="form-input" id="ck-filling" value="Вупи Пай"></div>
 
     <div class="form-group">
@@ -332,6 +383,20 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
         </div>
       </div>
     </div>
+    <div class="form-group" id="ck-frame-group" style="display:none">
+      <label class="form-label">Кадрирование фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(так фото будет обрезано в карточке на сайте)</span></label>
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:8px">
+        <div id="ck-frame-preview" style="width:130px;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--soft);position:relative;flex-shrink:0">
+          <img id="ck-frame-preview-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+        </div>
+        <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px">
+          <div><label style="font-size:11px;color:var(--muted)">Масштаб</label><input type="range" id="ck-frame-zoom" min="100" max="250" value="100" oninput="updateCkFrame()" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted)">По горизонтали</label><input type="range" id="ck-frame-x" min="0" max="100" value="50" oninput="updateCkFrame()" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted)">По вертикали</label><input type="range" id="ck-frame-y" min="0" max="100" value="50" oninput="updateCkFrame()" style="width:100%"></div>
+          <button class="btn btn-outline btn-sm" onclick="resetCkFrame()" style="align-self:flex-start">↺ Сбросить</button>
+        </div>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-cake')">Отмена</button>
       <button class="btn btn-primary" id="ck-save-btn" onclick="saveCake()">💾 Сохранить</button>
@@ -345,8 +410,29 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     <button class="modal-close" onclick="closeModal('modal-berry')">✕</button>
     <h2 class="modal-title" id="modal-berry-title">Новый сет</h2>
     <div class="form-group"><label class="form-label">Название сета</label><input class="form-input" id="br-name" placeholder="Сет «Нежность» — 9 ягод"></div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Название (English)</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="autoTranslate('br-name','br-name-en',this)" style="font-size:11px;padding:4px 10px;white-space:nowrap">✨ Перевести</button>
+      </label>
+      <input class="form-input" id="br-name-en" placeholder="&quot;Tenderness&quot; set — 9 berries">
+    </div>
     <div class="form-group"><label class="form-label">Подзаголовок (видно клиенту)</label><input class="form-input" id="br-subtitle" placeholder="Клубника в белом шоколаде"></div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Подзаголовок (English)</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="autoTranslate('br-subtitle','br-subtitle-en',this)" style="font-size:11px;padding:4px 10px;white-space:nowrap">✨ Перевести</button>
+      </label>
+      <input class="form-input" id="br-subtitle-en" placeholder="White chocolate strawberries">
+    </div>
     <div class="form-group"><label class="form-label">Описание</label><textarea class="form-textarea" id="br-desc" placeholder="Спелая клубника, покрытая бельгийским белым шоколадом…"></textarea></div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Описание (English)</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="autoTranslate('br-desc','br-desc-en',this)" style="font-size:11px;padding:4px 10px;white-space:nowrap">✨ Перевести</button>
+      </label>
+      <textarea class="form-textarea" id="br-desc-en" placeholder="Ripe strawberries covered in Belgian white chocolate…"></textarea>
+    </div>
 
     <div class="grid-2">
       <div class="form-group">
@@ -380,6 +466,20 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
       <div class="upload-zone" onclick="document.getElementById('br-file').click()">
         <input type="file" id="br-file" accept="image/*" onchange="handleBrPhoto(this)">
         <div id="br-preview"><div style="font-size:32px;margin-bottom:8px">🍓</div><div style="font-size:13px;color:var(--muted)">Нажмите для загрузки фото</div></div>
+      </div>
+    </div>
+    <div class="form-group" id="br-frame-group" style="display:none">
+      <label class="form-label">Кадрирование фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(так фото будет обрезано в карточке на сайте)</span></label>
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:8px">
+        <div id="br-frame-preview" style="width:130px;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--soft);position:relative;flex-shrink:0">
+          <img id="br-frame-preview-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+        </div>
+        <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px">
+          <div><label style="font-size:11px;color:var(--muted)">Масштаб</label><input type="range" id="br-frame-zoom" min="100" max="250" value="100" oninput="updateBrFrame()" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted)">По горизонтали</label><input type="range" id="br-frame-x" min="0" max="100" value="50" oninput="updateBrFrame()" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted)">По вертикали</label><input type="range" id="br-frame-y" min="0" max="100" value="50" oninput="updateBrFrame()" style="width:100%"></div>
+          <button class="btn btn-outline btn-sm" onclick="resetBrFrame()" style="align-self:flex-start">↺ Сбросить</button>
+        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -418,10 +518,10 @@ const CLOUDINARY_PRESET = 'zwgmlesi';
 // ── STATE ────────────────────────────────────────────────────────────────────
 let state = { bouquets: [], flowers: [], cakes: [], berries: [], categories: [] };
 const DEFAULT_CATEGORIES = [
-  { key: 'tulips', label: 'Тюльпаны', emoji: '🌷', enabled: true },
-  { key: 'roses', label: 'Розы', emoji: '🌹', enabled: true },
-  { key: 'mixed', label: 'Сборные', emoji: '💐', enabled: true },
-  { key: 'premium', label: 'Премиум', emoji: '✨', enabled: true },
+  { key: 'tulips', label: 'Тюльпаны', labelEn: 'Tulips', emoji: '🌷', enabled: true, order: 0 },
+  { key: 'roses', label: 'Розы', labelEn: 'Roses', emoji: '🌹', enabled: true, order: 1 },
+  { key: 'mixed', label: 'Сборные', labelEn: 'Mixed', emoji: '💐', enabled: true, order: 2 },
+  { key: 'premium', label: 'Премиум', labelEn: 'Premium', emoji: '✨', enabled: true, order: 3 },
 ];
 let categoriesSeeded = false;
 let currentPage = 'bouquets';
@@ -634,8 +734,9 @@ function bqCards(list) {
     const price = getPrice(b);
     const autoHidden = hasHiddenIngredient(b);
     const isHidden = !!b.hidden || autoHidden;
+    const fz = b.photoZoom || 1, fx = b.photoPosX != null ? b.photoPosX : 50, fy = b.photoPosY != null ? b.photoPosY : 50;
     const img = b.photoUrl
-      ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy">`
+      ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy" style="object-position:${fx}% ${fy}%;transform:scale(${fz});transform-origin:${fx}% ${fy}%;">`
       : `<div style="font-size:40px;z-index:1">${catEmoji(b.category)}</div>`;
     return `<div class="bq-card" style="${isHidden?'opacity:.55':''}" draggable="true" data-idx="${i}"
       ondragstart="bqCardDragStart(event,${i})" ondragover="bqCardDragOver(event,${i})"
@@ -758,6 +859,88 @@ window.onBqCategoryChange = function(catKey) {
   document.getElementById('bq-code').value = nextBqCode(catKey);
 };
 
+// Draft English translation for the site's language switch. Uses a free,
+// keyless translation API — the result is just a starting point, always
+// editable by hand before saving.
+window.autoTranslate = async function(fromId, toId, btn) {
+  const src = document.getElementById(fromId);
+  const dest = document.getElementById(toId);
+  const text = src?.value?.trim();
+  if (!text) { showToast('❌ Сначала заполните русский текст'); return; }
+  const original = btn.textContent;
+  btn.textContent = '…'; btn.disabled = true;
+  try {
+    const res = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=ru|en');
+    const json = await res.json();
+    const translated = json?.responseData?.translatedText;
+    if (translated) {
+      dest.value = translated;
+      showToast('✨ Черновик перевода готов — проверьте и поправьте при желании');
+    } else {
+      showToast('⚠️ Не удалось перевести автоматически, впишите вручную');
+    }
+  } catch (e) {
+    showToast('⚠️ Сервис перевода недоступен, впишите вручную');
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+};
+
+// One-click bulk translation for the whole catalog: fills nameEn/descEn
+// (and subtitleEn for berries) for every item that doesn't have one yet,
+// using the same free translation API as the per-field "✨ Перевести"
+// button. Never overwrites a translation that's already there, so it's
+// safe to re-run after adding new items later.
+async function mmTranslate(text) {
+  if (!text) return '';
+  try {
+    const res = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=ru|en');
+    const json = await res.json();
+    return json?.responseData?.translatedText || '';
+  } catch (e) { return ''; }
+}
+
+window.bulkTranslateAll = async function() {
+  if (!confirm('Перевести все товары без английского перевода? Это может занять минуту-две — не закрывайте страницу.')) return;
+  const btn = document.getElementById('bulk-translate-btn');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+
+  let done = 0, translated = 0, failed = 0;
+  const jobs = [
+    { items: state.bouquets, coll: 'bouquets', fields: [['name','nameEn'], ['desc','descEn']] },
+    { items: state.cakes, coll: 'cakes', fields: [['name','nameEn'], ['desc','descEn']] },
+    { items: state.berries, coll: 'berries', fields: [['name','nameEn'], ['subtitle','subtitleEn'], ['desc','descEn']] },
+    { items: state.categories, coll: 'categories', fields: [['label','labelEn']] },
+  ];
+  const total = jobs.reduce((s, j) => s + j.items.length, 0);
+
+  for (const job of jobs) {
+    for (const item of job.items) {
+      done++;
+      btn.textContent = `⏳ Переводим… ${done}/${total}`;
+      const updates = {};
+      for (const [ruField, enField] of job.fields) {
+        if (item[enField]) continue; // already translated (manually or before) — don't overwrite
+        if (!item[ruField]) continue;
+        const t = await mmTranslate(item[ruField]);
+        if (t) updates[enField] = t;
+      }
+      if (Object.keys(updates).length) {
+        try {
+          await updateDoc(doc(db, job.coll, item.id), updates);
+          translated++;
+        } catch (e) { failed++; }
+      }
+    }
+  }
+
+  btn.textContent = originalLabel;
+  btn.disabled = false;
+  showToast(`✅ Переведено карточек: ${translated}${failed ? `, ошибок: ${failed}` : ''}. Проверьте и поправьте при необходимости.`, 6000);
+};
+
 window.openBq = function(id) {
   editingId = id;
   const b = id ? state.bouquets.find(x => x.id === id) : null;
@@ -768,12 +951,17 @@ window.openBq = function(id) {
   } else {
     bqPhotos = [];
   }
+  document.getElementById('bq-frame-zoom').value = Math.round((b?.photoZoom || 1) * 100);
+  document.getElementById('bq-frame-x').value = b?.photoPosX != null ? b.photoPosX : 50;
+  document.getElementById('bq-frame-y').value = b?.photoPosY != null ? b.photoPosY : 50;
   renderBqPhotos();
   ingredientRows = b?.ingredients ? JSON.parse(JSON.stringify(b.ingredients)) : [];
 
   document.getElementById('modal-bouquet-title').textContent = id ? 'Редактировать букет' : 'Новый букет';
   document.getElementById('bq-name').value = b?.name || '';
   document.getElementById('bq-desc').value = b?.desc || '';
+  document.getElementById('bq-name-en').value = b?.nameEn || '';
+  document.getElementById('bq-desc-en').value = b?.descEn || '';
   document.getElementById('bq-price').value = b?.price || '';
   document.getElementById('bq-auto-price').checked = !!b?.autoPrice;
   if (state.categories.length) {
@@ -855,7 +1043,33 @@ function renderBqPhotos() {
   grid.innerHTML = html || `<div class="photo-add-tile" onclick="document.getElementById('bq-file').click()">
       <div style="font-size:20px">📷</div><div>Добавить фото<br>(0/5)</div>
     </div>`;
+  document.getElementById('bq-frame-group').style.display = bqPhotos.length ? 'block' : 'none';
+  updateBqFrame();
 }
+
+function updateBqFrame() {
+  const zoom = document.getElementById('bq-frame-zoom').value;
+  const x = document.getElementById('bq-frame-x').value;
+  const y = document.getElementById('bq-frame-y').value;
+  const img = document.getElementById('bq-frame-preview-img');
+  const url = bqPhotos[0]?.url;
+  if (url) {
+    img.src = url;
+    img.style.display = 'block';
+    img.style.objectPosition = `${x}% ${y}%`;
+    img.style.transform = `scale(${zoom/100})`;
+    img.style.transformOrigin = `${x}% ${y}%`;
+  } else {
+    img.style.display = 'none';
+  }
+}
+
+window.resetBqFrame = function() {
+  document.getElementById('bq-frame-zoom').value = 100;
+  document.getElementById('bq-frame-x').value = 50;
+  document.getElementById('bq-frame-y').value = 50;
+  updateBqFrame();
+};
 
 window.handleBqPhotos = function(input) {
   const files = Array.from(input.files || []);
@@ -916,10 +1130,15 @@ window.saveBouquet = async function() {
       code: document.getElementById('bq-code').value.trim(),
       name,
       desc: document.getElementById('bq-desc').value.trim(),
+      nameEn: document.getElementById('bq-name-en').value.trim(),
+      descEn: document.getElementById('bq-desc-en').value.trim(),
       category: document.getElementById('bq-category').value,
       price: parseInt(document.getElementById('bq-price').value) || 0,
       autoPrice: auto,
       ingredients: ingredientRows.filter(r => r.flowerId),
+      photoZoom: (parseInt(document.getElementById('bq-frame-zoom').value) || 100) / 100,
+      photoPosX: parseInt(document.getElementById('bq-frame-x').value) || 50,
+      photoPosY: parseInt(document.getElementById('bq-frame-y').value) || 50,
       updatedAt: serverTimestamp(),
     };
 
@@ -984,7 +1203,8 @@ function ckCards(list) {
   ckCardsCurrentList = list.map(c => c.id);
   if (!list.length) return '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🎂</div><p>Добавьте первый дизайн!</p></div>';
   return list.map((c, i) => {
-    const img = c.photoUrl ? `<img src="${c.photoUrl}" alt="${c.name}" loading="lazy">` : `<div style="font-size:40px;z-index:1">🎂</div>`;
+    const cfz = c.photoZoom || 1, cfx = c.photoPosX != null ? c.photoPosX : 50, cfy = c.photoPosY != null ? c.photoPosY : 50;
+    const img = c.photoUrl ? `<img src="${c.photoUrl}" alt="${c.name}" loading="lazy" style="object-position:${cfx}% ${cfy}%;transform:scale(${cfz});transform-origin:${cfx}% ${cfy}%;">` : `<div style="font-size:40px;z-index:1">🎂</div>`;
     return `<div class="bq-card" draggable="true" data-idx="${i}"
       ondragstart="ckCardDragStart(event,${i})" ondragover="ckCardDragOver(event,${i})"
       ondragleave="ckCardDragLeave(event)" ondrop="ckCardDrop(event,${i})" ondragend="ckCardDragEnd(event)"
@@ -1063,6 +1283,8 @@ window.openCk = function(id) {
   document.getElementById('modal-cake-title').textContent = id ? 'Редактировать торт' : 'Новый бенто-торт';
   document.getElementById('ck-name').value = c?.name || '';
   document.getElementById('ck-desc').value = c?.desc || '';
+  document.getElementById('ck-name-en').value = c?.nameEn || '';
+  document.getElementById('ck-desc-en').value = c?.descEn || '';
   document.getElementById('ck-filling').value = c?.filling || 'Вупи Пай';
   document.getElementById('ck-price').value = c?.price || 5000;
   document.getElementById('ck-auto-price').checked = !!c?.autoPrice;
@@ -1071,6 +1293,12 @@ window.openCk = function(id) {
   document.getElementById('ck-upload-preview').innerHTML = c?.photoUrl
     ? `<img src="${c.photoUrl}" style="max-height:120px;border-radius:8px">`
     : `<div style="font-size:32px;margin-bottom:8px">📷</div><div style="font-size:13px;color:var(--muted)">Нажмите для загрузки фото</div>`;
+  ckPreviewUrl = c?.photoUrl || '';
+  document.getElementById('ck-frame-zoom').value = Math.round((c?.photoZoom || 1) * 100);
+  document.getElementById('ck-frame-x').value = c?.photoPosX != null ? c.photoPosX : 50;
+  document.getElementById('ck-frame-y').value = c?.photoPosY != null ? c.photoPosY : 50;
+  document.getElementById('ck-frame-group').style.display = ckPreviewUrl ? 'block' : 'none';
+  updateCkFrame();
   renderCkIngredients();
   openModal('modal-cake');
 };
@@ -1161,6 +1389,34 @@ window.handleCkPhoto = function(input) {
   const f = input.files[0]; if (!f) return;
   pendingCkFile = f;
   document.getElementById('ck-upload-preview').innerHTML = `<img src="${URL.createObjectURL(f)}" style="max-height:120px;border-radius:8px">`;
+  ckPreviewUrl = URL.createObjectURL(f);
+  document.getElementById('ck-frame-group').style.display = 'block';
+  updateCkFrame();
+};
+
+let ckPreviewUrl = '';
+
+function updateCkFrame() {
+  const zoom = document.getElementById('ck-frame-zoom').value;
+  const x = document.getElementById('ck-frame-x').value;
+  const y = document.getElementById('ck-frame-y').value;
+  const img = document.getElementById('ck-frame-preview-img');
+  if (ckPreviewUrl) {
+    img.src = ckPreviewUrl;
+    img.style.display = 'block';
+    img.style.objectPosition = `${x}% ${y}%`;
+    img.style.transform = `scale(${zoom/100})`;
+    img.style.transformOrigin = `${x}% ${y}%`;
+  } else {
+    img.style.display = 'none';
+  }
+}
+
+window.resetCkFrame = function() {
+  document.getElementById('ck-frame-zoom').value = 100;
+  document.getElementById('ck-frame-x').value = 50;
+  document.getElementById('ck-frame-y').value = 50;
+  updateCkFrame();
 };
 
 window.saveCake = async function() {
@@ -1172,10 +1428,15 @@ window.saveCake = async function() {
   try {
     const data = {
       name, desc: document.getElementById('ck-desc').value.trim(),
+      nameEn: document.getElementById('ck-name-en').value.trim(),
+      descEn: document.getElementById('ck-desc-en').value.trim(),
       filling: document.getElementById('ck-filling').value.trim(),
       price: parseInt(document.getElementById('ck-price').value) || 5000,
       autoPrice: document.getElementById('ck-auto-price').checked,
       ingredients: ckIngredientRows.filter(r => r.flowerId),
+      photoZoom: (parseInt(document.getElementById('ck-frame-zoom').value) || 100) / 100,
+      photoPosX: parseInt(document.getElementById('ck-frame-x').value) || 50,
+      photoPosY: parseInt(document.getElementById('ck-frame-y').value) || 50,
       updatedAt: serverTimestamp(),
     };
     if (editingId) {
@@ -1233,7 +1494,8 @@ function brCards(list) {
   brCardsCurrentList = list.map(b => b.id);
   if (!list.length) return '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🍓</div><p>Добавьте первый сет!</p></div>';
   return list.map((b, i) => {
-    const img = b.photoUrl ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy">` : `<div style="font-size:40px;z-index:1">🍓</div>`;
+    const bfz = b.photoZoom || 1, bfx = b.photoPosX != null ? b.photoPosX : 50, bfy = b.photoPosY != null ? b.photoPosY : 50;
+    const img = b.photoUrl ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy" style="object-position:${bfx}% ${bfy}%;transform:scale(${bfz});transform-origin:${bfx}% ${bfy}%;">` : `<div style="font-size:40px;z-index:1">🍓</div>`;
     const price = b.price ? b.price.toLocaleString('ru') + ' тг' : '—';
     return `<div class="bq-card" draggable="true" data-idx="${i}"
       ondragstart="brCardDragStart(event,${i})" ondragover="brCardDragOver(event,${i})"
@@ -1314,6 +1576,9 @@ window.openBr = function(id) {
   document.getElementById('br-name').value = b?.name || '';
   document.getElementById('br-subtitle').value = b?.subtitle || '';
   document.getElementById('br-desc').value = b?.desc || '';
+  document.getElementById('br-name-en').value = b?.nameEn || '';
+  document.getElementById('br-subtitle-en').value = b?.subtitleEn || '';
+  document.getElementById('br-desc-en').value = b?.descEn || '';
   document.getElementById('br-qty').value = b?.qty || '';
   document.getElementById('br-price').value = b?.price || '';
   document.getElementById('br-auto-price').checked = !!b?.autoPrice;
@@ -1322,6 +1587,12 @@ window.openBr = function(id) {
   document.getElementById('br-preview').innerHTML = b?.photoUrl
     ? `<img src="${b.photoUrl}" style="max-height:120px;border-radius:8px">`
     : `<div style="font-size:32px;margin-bottom:8px">🍓</div><div style="font-size:13px;color:var(--muted)">Нажмите для загрузки фото</div>`;
+  brPreviewUrl = b?.photoUrl || '';
+  document.getElementById('br-frame-zoom').value = Math.round((b?.photoZoom || 1) * 100);
+  document.getElementById('br-frame-x').value = b?.photoPosX != null ? b.photoPosX : 50;
+  document.getElementById('br-frame-y').value = b?.photoPosY != null ? b.photoPosY : 50;
+  document.getElementById('br-frame-group').style.display = brPreviewUrl ? 'block' : 'none';
+  updateBrFrame();
   renderBrIngredients();
   if (b?.autoPrice) updateBrBreakdown();
   openModal('modal-berry');
@@ -1337,6 +1608,34 @@ window.handleBrPhoto = function(input) {
   const f = input.files[0]; if (!f) return;
   pendingBrFile = f;
   document.getElementById('br-preview').innerHTML = `<img src="${URL.createObjectURL(f)}" style="max-height:120px;border-radius:8px">`;
+  brPreviewUrl = URL.createObjectURL(f);
+  document.getElementById('br-frame-group').style.display = 'block';
+  updateBrFrame();
+};
+
+let brPreviewUrl = '';
+
+function updateBrFrame() {
+  const zoom = document.getElementById('br-frame-zoom').value;
+  const x = document.getElementById('br-frame-x').value;
+  const y = document.getElementById('br-frame-y').value;
+  const img = document.getElementById('br-frame-preview-img');
+  if (brPreviewUrl) {
+    img.src = brPreviewUrl;
+    img.style.display = 'block';
+    img.style.objectPosition = `${x}% ${y}%`;
+    img.style.transform = `scale(${zoom/100})`;
+    img.style.transformOrigin = `${x}% ${y}%`;
+  } else {
+    img.style.display = 'none';
+  }
+}
+
+window.resetBrFrame = function() {
+  document.getElementById('br-frame-zoom').value = 100;
+  document.getElementById('br-frame-x').value = 50;
+  document.getElementById('br-frame-y').value = 50;
+  updateBrFrame();
 };
 
 window.saveBerry = async function() {
@@ -1349,10 +1648,16 @@ window.saveBerry = async function() {
       name,
       subtitle: document.getElementById('br-subtitle').value.trim(),
       desc: document.getElementById('br-desc').value.trim(),
+      nameEn: document.getElementById('br-name-en').value.trim(),
+      subtitleEn: document.getElementById('br-subtitle-en').value.trim(),
+      descEn: document.getElementById('br-desc-en').value.trim(),
       qty: parseInt(document.getElementById('br-qty').value) || 0,
       price: parseInt(document.getElementById('br-price').value) || 0,
       autoPrice: document.getElementById('br-auto-price').checked,
       ingredients: brIngredientRows.filter(r => r.flowerId),
+      photoZoom: (parseInt(document.getElementById('br-frame-zoom').value) || 100) / 100,
+      photoPosX: parseInt(document.getElementById('br-frame-x').value) || 50,
+      photoPosY: parseInt(document.getElementById('br-frame-y').value) || 50,
       updatedAt: serverTimestamp(),
     };
     if (editingId) {
@@ -1385,30 +1690,50 @@ window.deleteBr = async function(id) {
 };
 
 // ── CATEGORIES ────────────────────────────────────────────────────────────────
+let catsCurrentList = [];
+let dragCatIndex = null;
+
 function renderCategories() {
-  const cats = state.categories;
+  // Sort by admin-set order (drag position) first; categories with no order
+  // yet (never reordered) fall back to their existing Firestore order.
+  const cats = [...state.categories].sort((a, b) => {
+    const ao = a.order, bo = b.order;
+    if (ao != null && bo != null) return ao - bo;
+    if (ao != null) return -1;
+    if (bo != null) return 1;
+    return 0;
+  });
+  catsCurrentList = cats.map(c => c.id);
   document.getElementById('main-content').innerHTML = `
     <div class="page-header">
       <div class="page-title">Категории <span>${cats.length} шт.</span></div>
     </div>
     <div class="card">
       <div class="card-title">➕ Новая категория</div>
-      <div style="display:grid;grid-template-columns:70px 1fr 140px 120px;gap:10px;align-items:end;">
+      <div style="display:grid;grid-template-columns:70px 1fr 1fr 140px 120px;gap:10px;align-items:end;">
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Эмодзи</label><input class="form-input" id="cat-new-emoji" value="🌼" style="text-align:center"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Название</label><input class="form-input" id="cat-new-label" placeholder="Например: Пионы"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Название (English)</label><input class="form-input" id="cat-new-label-en" placeholder="Peonies"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Ключ (латиницей)</label><input class="form-input" id="cat-new-key" placeholder="peonies"></div>
         <button class="btn btn-primary" onclick="addCategory()">Добавить</button>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">Список категорий</div>
-      <div style="display:grid;grid-template-columns:60px 1fr 140px 110px;gap:10px;padding:8px 0 10px;border-bottom:2px solid var(--border)">
-        ${['','Название','Показывать','' ].map(h=>`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${h}</div>`).join('')}
+      <div class="card-title">Список категорий <span style="font-size:11px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">— перетаскивайте за ⠿, чтобы менять порядок вкладок на сайте</span></div>
+      <div style="display:grid;grid-template-columns:24px 60px 1fr 1fr 140px 110px;gap:10px;padding:8px 0 10px;border-bottom:2px solid var(--border)">
+        ${['','','Название','English','Показывать','' ].map(h=>`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${h}</div>`).join('')}
       </div>
-      ${cats.map(c => `
-        <div class="flower-row" style="grid-template-columns:60px 1fr 140px 110px">
+      ${cats.map((c, i) => `
+        <div class="flower-row" style="grid-template-columns:24px 60px 1fr 1fr 140px 110px" draggable="true" data-idx="${i}"
+          ondragstart="catDragStart(event,${i})" ondragover="catDragOver(event,${i})"
+          ondragleave="catDragLeave(event)" ondrop="catDrop(event,${i})" ondragend="catDragEnd(event)">
+          <span style="cursor:grab;color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center" title="Тащите, чтобы переставить">⠿</span>
           <div style="font-size:20px;text-align:center">${c.emoji||'🌼'}</div>
           <div><input class="form-input" value="${c.label||c.key}" onchange="renameCategory('${c.id}',this.value)" style="padding:6px 10px;font-size:13px"></div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="form-input" value="${c.labelEn||''}" placeholder="English name" onchange="renameCategoryEn('${c.id}',this.value)" style="padding:6px 10px;font-size:13px">
+            <button class="btn btn-outline btn-sm" onclick="translateCategoryLabel('${c.id}',this)" title="Перевести автоматически" style="font-size:11px;padding:6px 9px;white-space:nowrap">✨</button>
+          </div>
           <div>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer">
               <input type="checkbox" ${c.enabled!==false?'checked':''} onchange="toggleCategory('${c.id}',this.checked)">
@@ -1419,18 +1744,88 @@ function renderCategories() {
         </div>`).join('')}
       ${!cats.length?'<div class="empty"><p>Нет категорий</p></div>':''}
     </div>
-    <div style="font-size:12px;color:var(--muted)">💡 Скрытая категория пропадает из выбора при создании букета и её букеты не показываются на сайте</div>`;
+    <div style="font-size:12px;color:var(--muted)">💡 Скрытая категория пропадает из выбора при создании букета и её букеты не показываются на сайте</div>
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">🌍 Английский перевод каталога</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Одной кнопкой переведёт название и описание всех букетов, тортов и клубничных сетов, у которых ещё нет английского перевода (заполненные вручную поля не трогает). Перевод черновой — потом можно поправить у любой карточки.
+      </div>
+      <button class="btn btn-primary" id="bulk-translate-btn" onclick="bulkTranslateAll()">✨ Перевести весь каталог на English</button>
+    </div>`;
 }
+
+window.catDragStart = function(e, i) {
+  dragCatIndex = i;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(i));
+};
+window.catDragOver = function(e, i) {
+  e.preventDefault();
+  if (dragCatIndex === null || dragCatIndex === i) return;
+  e.currentTarget.classList.add('drag-over');
+};
+window.catDragLeave = function(e) {
+  e.currentTarget.classList.remove('drag-over');
+};
+window.catDrop = async function(e, i) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragCatIndex === null || dragCatIndex === i) return;
+  const ids = catsCurrentList.slice();
+  const [movedId] = ids.splice(dragCatIndex, 1);
+  ids.splice(i, 0, movedId);
+  dragCatIndex = null;
+  catsCurrentList = ids;
+
+  try {
+    const batch = writeBatch(db);
+    ids.forEach((id, idx) => batch.update(doc(db, 'categories', id), { order: idx }));
+    await batch.commit();
+  } catch (e2) {
+    showToast('❌ Не удалось сохранить порядок: ' + e2.message, 4000);
+  }
+};
+window.catDragEnd = function(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.flower-row.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragCatIndex = null;
+};
+
+window.translateCategoryLabel = async function(id, btn) {
+  const cat = state.categories.find(c => c.id === id);
+  if (!cat?.label) { showToast('❌ Сначала впишите русское название'); return; }
+  const original = btn.textContent;
+  btn.textContent = '…'; btn.disabled = true;
+  try {
+    const t = await mmTranslate(cat.label);
+    if (t) {
+      await updateDoc(doc(db, 'categories', id), { labelEn: t });
+      showToast('✨ Переведено — можно поправить вручную');
+    } else {
+      showToast('⚠️ Не удалось перевести автоматически, впишите вручную');
+    }
+  } catch (e) {
+    showToast('⚠️ Сервис перевода недоступен, впишите вручную');
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+};
 
 window.addCategory = async function() {
   const label = document.getElementById('cat-new-label').value.trim();
+  const labelEn = document.getElementById('cat-new-label-en').value.trim();
   let key = document.getElementById('cat-new-key').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
   const emoji = document.getElementById('cat-new-emoji').value.trim() || '🌼';
   if (!label) { showToast('❌ Введите название'); return; }
   if (!key) key = 'cat_' + uid();
   if (state.categories.some(c => c.key === key || c.id === key)) { showToast('❌ Такой ключ уже существует'); return; }
   try {
-    await setDoc(doc(db, 'categories', key), { key, label, emoji, enabled: true });
+    const order = state.categories.length
+      ? Math.max(...state.categories.map(c => c.order != null ? c.order : 0)) + 1
+      : 0;
+    await setDoc(doc(db, 'categories', key), { key, label, labelEn, emoji, enabled: true, order });
     showToast('✅ Категория добавлена');
   } catch(e) { showToast('❌ ' + e.message, 4000); }
 };
@@ -1439,6 +1834,13 @@ window.renameCategory = async function(id, label) {
   try {
     await updateDoc(doc(db, 'categories', id), { label: label.trim() });
     showToast('✅ Название обновлено');
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
+};
+
+window.renameCategoryEn = async function(id, labelEn) {
+  try {
+    await updateDoc(doc(db, 'categories', id), { labelEn: labelEn.trim() });
+    showToast('✅ Английское название обновлено');
   } catch(e) { showToast('❌ ' + e.message, 4000); }
 };
 
