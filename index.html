@@ -68,6 +68,8 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 .bouquet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
 .bq-card{background:#fff;border-radius:14px;border:1px solid var(--border);overflow:hidden;transition:transform .15s}
 .bq-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(61,43,61,0.08)}
+.bq-card.dragging{opacity:.4}
+.bq-card.drag-over{outline:2px dashed var(--plum-light);outline-offset:-2px}
 .bq-img{width:100%;aspect-ratio:3/4;background:linear-gradient(145deg,var(--rose),#d8b0c0);display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;cursor:pointer;overflow:hidden}
 .bq-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
 .bq-img-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.35);opacity:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:500;transition:opacity .15s;z-index:2}
@@ -388,7 +390,7 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // ── FIREBASE CONFIG ──────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -477,7 +479,13 @@ onAuthStateChanged(auth, user => {
 function startListeners() {
   unsubs.push(onSnapshot(collection(db, 'bouquets'), snap => {
     state.bouquets = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    state.bouquets.sort((a,b) => (a.code||'').localeCompare(b.code||'', 'ru'));
+    state.bouquets.sort((a,b) => {
+      const ao = a.order, bo = b.order;
+      if (ao != null && bo != null) return ao - bo;
+      if (ao != null) return -1;
+      if (bo != null) return 1;
+      return (a.code||'').localeCompare(b.code||'', 'ru');
+    });
     document.getElementById('badge-bouquets').textContent = state.bouquets.length;
     if (currentPage === 'bouquets') renderBouquets();
     if (currentPage === 'prices') renderPrices();
@@ -598,22 +606,30 @@ function hasHiddenIngredient(item) {
   return (item.ingredients||[]).some(ing => state.flowers.find(f => f.id === ing.flowerId)?.hidden);
 }
 
+let bqCardsCurrentList = []; // ids in the order currently rendered, for drag-reorder
+let dragBqCardIndex = null;
+
 function bqCards(list) {
+  bqCardsCurrentList = list.map(b => b.id);
   if (!list.length) return '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">💐</div><p>Нет букетов — добавьте первый!</p></div>';
-  return list.map(b => {
+  return list.map((b, i) => {
     const price = getPrice(b);
     const autoHidden = hasHiddenIngredient(b);
     const isHidden = !!b.hidden || autoHidden;
     const img = b.photoUrl
       ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy">`
       : `<div style="font-size:40px;z-index:1">${catEmoji(b.category)}</div>`;
-    return `<div class="bq-card" style="${isHidden?'opacity:.55':''}">
+    return `<div class="bq-card" style="${isHidden?'opacity:.55':''}" draggable="true" data-idx="${i}"
+      ondragstart="bqCardDragStart(event,${i})" ondragover="bqCardDragOver(event,${i})"
+      ondragleave="bqCardDragLeave(event)" ondrop="bqCardDrop(event,${i})" ondragend="bqCardDragEnd(event)"
+      title="Перетащите, чтобы изменить порядок на сайте">
       <div class="bq-img" onclick="openBq('${b.id}')">${img}<div class="bq-img-overlay">✏️ Редактировать</div></div>
       <div class="bq-body">
         <div class="bq-code">${b.code||''} · ${catLabel(b.category)} ${isHidden?`<span class="tag tag-blue" style="margin-left:4px">🙈 ${autoHidden?'скрыт (цветок скрыт)':'скрыт'}</span>`:''}</div>
         <div class="bq-name">${b.name||'Без названия'}</div>
         <div class="bq-price">${price ? price.toLocaleString('ru') : '—'} <span style="font-size:12px;font-family:Inter;color:var(--muted)">тг</span>${b.autoPrice?'<span class="bq-auto">⟳ авто</span>':''}</div>
         <div class="bq-actions">
+          <span class="bq-drag-handle" title="Тащите за карточку, чтобы переставить" style="cursor:grab;color:var(--muted);font-size:14px;padding:4px 2px">⠿</span>
           <button class="btn btn-outline btn-sm" onclick="openBq('${b.id}')">✏️ Изменить</button>
           <button class="btn btn-outline btn-sm" onclick="toggleBqHidden('${b.id}',${!b.hidden})" title="${b.hidden?'Показать на сайте':'Скрыть с сайта'}">${b.hidden?'👁':'🙈'}</button>
           <button class="btn btn-danger btn-sm" onclick="deleteBq('${b.id}')">🗑</button>
@@ -621,6 +637,66 @@ function bqCards(list) {
       </div>
     </div>`;
   }).join('');
+}
+
+window.bqCardDragStart = function(e, i) {
+  dragBqCardIndex = i;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(i));
+};
+window.bqCardDragOver = function(e, i) {
+  e.preventDefault();
+  if (dragBqCardIndex === null || dragBqCardIndex === i) return;
+  e.currentTarget.classList.add('drag-over');
+};
+window.bqCardDragLeave = function(e) {
+  e.currentTarget.classList.remove('drag-over');
+};
+window.bqCardDrop = async function(e, i) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragBqCardIndex === null || dragBqCardIndex === i) return;
+  const ids = bqCardsCurrentList.slice();
+  const [movedId] = ids.splice(dragBqCardIndex, 1);
+  ids.splice(i, 0, movedId);
+  dragBqCardIndex = null;
+
+  // Optimistic re-render for instant feedback
+  const idToBq = new Map(state.bouquets.map(b => [b.id, b]));
+  const grid = document.getElementById('bq-grid');
+  if (grid) grid.innerHTML = bqCards(ids.map(id => idToBq.get(id)).filter(Boolean));
+
+  await persistBqOrder(ids);
+};
+window.bqCardDragEnd = function(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.bq-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragBqCardIndex = null;
+};
+
+async function persistBqOrder(newOrderedIds) {
+  // Merge the reordered visible subset back into the full bouquet list, keeping
+  // other (currently filtered-out) bouquets in their existing relative slots.
+  const fullSorted = state.bouquets; // already sorted by current order/code
+  const visibleSet = new Set(newOrderedIds);
+  const slots = [];
+  fullSorted.forEach((b, i) => { if (visibleSet.has(b.id)) slots.push(i); });
+  const idToItem = new Map(fullSorted.map(b => [b.id, b]));
+  const result = fullSorted.slice();
+  slots.forEach((slotIdx, k) => { result[slotIdx] = idToItem.get(newOrderedIds[k]); });
+
+  try {
+    const batch = writeBatch(db);
+    let changed = 0;
+    result.forEach((b, i) => {
+      if (b.order !== i) { batch.update(doc(db, 'bouquets', b.id), { order: i }); changed++; }
+    });
+    if (changed) {
+      await batch.commit();
+      showToast('✅ Порядок сохранён');
+    }
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
 }
 
 window.toggleBqHidden = async function(id, hidden) {
