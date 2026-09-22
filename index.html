@@ -17,7 +17,8 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 
 /* SIDEBAR */
 .sidebar{background:var(--plum);padding:28px 0;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
-.sidebar-logo{font-family:'Cormorant Garant',serif;font-size:22px;font-weight:300;letter-spacing:.16em;color:var(--rose);padding:0 24px 24px;border-bottom:1px solid rgba(242,196,206,0.15);margin-bottom:12px}
+.sidebar-logo{font-family:'Cormorant Garant',serif;font-size:22px;font-weight:300;letter-spacing:.16em;color:var(--rose);padding:0 24px 24px;border-bottom:1px solid rgba(242,196,206,0.15);margin-bottom:12px;text-decoration:none;display:block;cursor:pointer;transition:opacity .15s}
+.sidebar-logo:hover{opacity:.8}
 .sidebar-logo span{display:block;font-size:10px;font-family:'Inter',sans-serif;letter-spacing:.1em;color:rgba(242,196,206,0.5);margin-top:4px;font-weight:400}
 .nav-item{display:flex;align-items:center;gap:10px;padding:11px 24px;font-size:13px;font-weight:400;color:rgba(255,255,255,0.6);cursor:pointer;border-left:2px solid transparent;transition:all .15s;user-select:none}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,0.06)}
@@ -110,7 +111,7 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 .upload-zone input{display:none}
 
 /* FLOWER TABLE */
-.flower-row{display:grid;grid-template-columns:1fr 130px 110px 90px 32px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(61,43,61,0.06)}
+.flower-row{display:grid;grid-template-columns:1fr 130px 110px 90px 32px 32px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(61,43,61,0.06)}
 .flower-row:last-child{border:none}
 
 /* TABS */
@@ -148,7 +149,7 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
   .main{padding:20px}
   .stat-grid{grid-template-columns:1fr 1fr}
   .grid-2{grid-template-columns:1fr}
-  .flower-row{grid-template-columns:1fr 90px 80px 32px}
+  .flower-row{grid-template-columns:1fr 90px 80px 32px 32px}
 }
 </style>
 </head>
@@ -169,12 +170,13 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 <!-- MAIN APP (hidden until auth) -->
 <div class="app" id="app" style="display:none">
   <aside class="sidebar">
-    <div class="sidebar-logo">FLOMART<span>Панель управления</span></div>
+    <a class="sidebar-logo" href="https://altynbekaraucaria.github.io/webflomart/" target="_blank" rel="noopener">FLOMART<span>Панель управления</span></a>
     <div class="nav-section">Каталог</div>
     <div class="nav-item active" data-page="bouquets" onclick="navigate('bouquets')"><span class="nav-icon">💐</span> Букеты <span class="badge" id="badge-bouquets">0</span></div>
     <div class="nav-item" data-page="cakes" onclick="navigate('cakes')"><span class="nav-icon">🎂</span> Бенто-торты <span class="badge" id="badge-cakes">0</span></div>
     <div class="nav-item" data-page="berries" onclick="navigate('berries')"><span class="nav-icon">🍓</span> Клубника <span class="badge" id="badge-berries">0</span></div>
     <div class="nav-section">Управление</div>
+    <div class="nav-item" data-page="categories" onclick="navigate('categories')"><span class="nav-icon">🏷️</span> Категории</div>
     <div class="nav-item" data-page="flowers" onclick="navigate('flowers')"><span class="nav-icon">🌸</span> Цветы и цены</div>
     <div class="nav-section">Система</div>
     <div class="nav-item" data-page="export" onclick="navigate('export')"><span class="nav-icon">📤</span> Экспорт данных</div>
@@ -400,7 +402,14 @@ const CLOUDINARY_CLOUD = 'jeg47a8m';
 const CLOUDINARY_PRESET = 'zwgmlesi';
 
 // ── STATE ────────────────────────────────────────────────────────────────────
-let state = { bouquets: [], flowers: [], cakes: [], berries: [] };
+let state = { bouquets: [], flowers: [], cakes: [], berries: [], categories: [] };
+const DEFAULT_CATEGORIES = [
+  { key: 'tulips', label: 'Тюльпаны', emoji: '🌷', enabled: true },
+  { key: 'roses', label: 'Розы', emoji: '🌹', enabled: true },
+  { key: 'mixed', label: 'Сборные', emoji: '💐', enabled: true },
+  { key: 'premium', label: 'Премиум', emoji: '✨', enabled: true },
+];
+let categoriesSeeded = false;
 let currentPage = 'bouquets';
 let editingId = null;
 let pendingBqFile = null;
@@ -469,6 +478,20 @@ function startListeners() {
     state.flowers = snap.docs.map(d => ({id: d.id, ...d.data()}));
     state.flowers.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
     if (currentPage === 'flowers') renderFlowers();
+    if (currentPage === 'bouquets') renderBouquets();
+  }));
+
+  unsubs.push(onSnapshot(collection(db, 'categories'), async snap => {
+    if (snap.empty && !categoriesSeeded) {
+      categoriesSeeded = true;
+      for (const c of DEFAULT_CATEGORIES) {
+        await setDoc(doc(db, 'categories', c.key), c);
+      }
+      return; // the write above will re-trigger this snapshot
+    }
+    state.categories = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    if (currentPage === 'categories') renderCategories();
+    if (currentPage === 'bouquets') renderBouquets();
   }));
 
   unsubs.push(onSnapshot(collection(db, 'cakes'), snap => {
@@ -495,9 +518,10 @@ function startListeners() {
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
-function catEmoji(c) { return {tulips:'🌷',roses:'🌹',mixed:'💐',premium:'✨'}[c]||'💐'; }
-function catLabel(c) { return {tulips:'Тюльпаны',roses:'Розы',mixed:'Сборные',premium:'Премиум'}[c]||c; }
+function catEmoji(c) { return state.categories.find(x=>x.key===c)?.emoji || {tulips:'🌷',roses:'🌹',mixed:'💐',premium:'✨'}[c]||'💐'; }
+function catLabel(c) { return state.categories.find(x=>x.key===c)?.label || {tulips:'Тюльпаны',roses:'Розы',mixed:'Сборные',premium:'Премиум'}[c]||c; }
 function catTagClass(c) { return {tulips:'tag-rose',roses:'tag-rose',mixed:'tag-blue',premium:'tag-blue'}[c]||'tag-blue'; }
+function catEnabled(c) { const cat = state.categories.find(x=>x.key===c); return cat ? cat.enabled !== false : true; }
 
 function calcAuto(b) {
   const total = (b.ingredients||[]).reduce((s, ing) => {
@@ -538,41 +562,51 @@ window.navigate = function(page) {
   document.querySelectorAll('.nav-item').forEach(el =>
     el.classList.toggle('active', el.dataset.page === page)
   );
-  ({ bouquets: renderBouquets, cakes: renderCakes, flowers: renderFlowers, prices: renderPrices, export: renderExport, berries: renderBerries }[page] || renderBouquets)();
+  ({ bouquets: renderBouquets, cakes: renderCakes, flowers: renderFlowers, prices: renderPrices, export: renderExport, berries: renderBerries, categories: renderCategories }[page] || renderBouquets)();
 };
 
 // ── BOUQUETS ──────────────────────────────────────────────────────────────────
+let bqFilter = 'all';
+
 function renderBouquets() {
+  const cats = state.categories.length ? state.categories : DEFAULT_CATEGORIES.map(c=>({...c,id:c.key}));
+  const tabDefs = [
+    ['all', `Все (${state.bouquets.length})`],
+    ...cats.map(c => [c.key, `${c.emoji||''} ${state.bouquets.filter(b=>b.category===c.key).length}${c.enabled===false?' 🙈':''}`]),
+  ];
   document.getElementById('main-content').innerHTML = `
     <div class="page-header">
       <div class="page-title">Букеты <span>${state.bouquets.length} позиций</span></div>
       <button class="btn btn-primary" onclick="openBq(null)">+ Добавить букет</button>
     </div>
     <div class="tab-row">
-      <button class="tab-btn active" onclick="filterBq('all',this)">Все (${state.bouquets.length})</button>
-      <button class="tab-btn" onclick="filterBq('tulips',this)">🌷 ${state.bouquets.filter(b=>b.category==='tulips').length}</button>
-      <button class="tab-btn" onclick="filterBq('roses',this)">🌹 ${state.bouquets.filter(b=>b.category==='roses').length}</button>
-      <button class="tab-btn" onclick="filterBq('mixed',this)">💐 ${state.bouquets.filter(b=>b.category==='mixed').length}</button>
-      <button class="tab-btn" onclick="filterBq('premium',this)">✨ ${state.bouquets.filter(b=>b.category==='premium').length}</button>
+      ${tabDefs.map(([cat,label]) => `<button class="tab-btn${bqFilter===cat?' active':''}" onclick="filterBq('${cat}',this)">${label}</button>`).join('')}
     </div>
-    <div class="bouquet-grid" id="bq-grid">${bqCards(state.bouquets)}</div>`;
+    <div class="bouquet-grid" id="bq-grid">${bqCards(bqFilter==='all' ? state.bouquets : state.bouquets.filter(b=>b.category===bqFilter))}</div>`;
+}
+
+function hasHiddenIngredient(item) {
+  return (item.ingredients||[]).some(ing => state.flowers.find(f => f.id === ing.flowerId)?.hidden);
 }
 
 function bqCards(list) {
   if (!list.length) return '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">💐</div><p>Нет букетов — добавьте первый!</p></div>';
   return list.map(b => {
     const price = getPrice(b);
+    const autoHidden = hasHiddenIngredient(b);
+    const isHidden = !!b.hidden || autoHidden;
     const img = b.photoUrl
       ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy">`
       : `<div style="font-size:40px;z-index:1">${catEmoji(b.category)}</div>`;
-    return `<div class="bq-card">
+    return `<div class="bq-card" style="${isHidden?'opacity:.55':''}">
       <div class="bq-img" onclick="openBq('${b.id}')">${img}<div class="bq-img-overlay">✏️ Редактировать</div></div>
       <div class="bq-body">
-        <div class="bq-code">${b.code||''} · ${catLabel(b.category)}</div>
+        <div class="bq-code">${b.code||''} · ${catLabel(b.category)} ${isHidden?`<span class="tag tag-blue" style="margin-left:4px">🙈 ${autoHidden?'скрыт (цветок скрыт)':'скрыт'}</span>`:''}</div>
         <div class="bq-name">${b.name||'Без названия'}</div>
         <div class="bq-price">${price ? price.toLocaleString('ru') : '—'} <span style="font-size:12px;font-family:Inter;color:var(--muted)">тг</span>${b.autoPrice?'<span class="bq-auto">⟳ авто</span>':''}</div>
         <div class="bq-actions">
           <button class="btn btn-outline btn-sm" onclick="openBq('${b.id}')">✏️ Изменить</button>
+          <button class="btn btn-outline btn-sm" onclick="toggleBqHidden('${b.id}',${!b.hidden})" title="${b.hidden?'Показать на сайте':'Скрыть с сайта'}">${b.hidden?'👁':'🙈'}</button>
           <button class="btn btn-danger btn-sm" onclick="deleteBq('${b.id}')">🗑</button>
         </div>
       </div>
@@ -580,7 +614,15 @@ function bqCards(list) {
   }).join('');
 }
 
+window.toggleBqHidden = async function(id, hidden) {
+  try {
+    await updateDoc(doc(db, 'bouquets', id), { hidden });
+    showToast(hidden ? '🙈 Букет скрыт с сайта' : '👁 Букет снова виден на сайте');
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
+};
+
 window.filterBq = function(cat, btn) {
+  bqFilter = cat;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const list = cat === 'all' ? state.bouquets : state.bouquets.filter(b => b.category === cat);
@@ -599,7 +641,13 @@ window.openBq = function(id) {
   document.getElementById('bq-desc').value = b?.desc || '';
   document.getElementById('bq-price').value = b?.price || '';
   document.getElementById('bq-auto-price').checked = !!b?.autoPrice;
-  document.getElementById('bq-category').value = b?.category || 'mixed';
+  if (state.categories.length) {
+    const catSel = document.getElementById('bq-category');
+    catSel.innerHTML = state.categories.map(c =>
+      `<option value="${c.key}">${c.emoji||''} ${c.label||c.key}${c.enabled===false?' (скрыта)':''}</option>`
+    ).join('');
+  }
+  document.getElementById('bq-category').value = b?.category || state.categories[0]?.key || 'mixed';
   document.getElementById('bq-price').disabled = !!b?.autoPrice;
   document.getElementById('price-breakdown').style.display = b?.autoPrice ? 'block' : 'none';
 
@@ -1018,6 +1066,77 @@ window.deleteBr = async function(id) {
   showToast('🗑 Удалено');
 };
 
+// ── CATEGORIES ────────────────────────────────────────────────────────────────
+function renderCategories() {
+  const cats = state.categories;
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div class="page-title">Категории <span>${cats.length} шт.</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">➕ Новая категория</div>
+      <div style="display:grid;grid-template-columns:70px 1fr 140px 120px;gap:10px;align-items:end;">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Эмодзи</label><input class="form-input" id="cat-new-emoji" value="🌼" style="text-align:center"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Название</label><input class="form-input" id="cat-new-label" placeholder="Например: Пионы"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Ключ (латиницей)</label><input class="form-input" id="cat-new-key" placeholder="peonies"></div>
+        <button class="btn btn-primary" onclick="addCategory()">Добавить</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Список категорий</div>
+      <div style="display:grid;grid-template-columns:60px 1fr 140px 110px;gap:10px;padding:8px 0 10px;border-bottom:2px solid var(--border)">
+        ${['','Название','Показывать','' ].map(h=>`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${h}</div>`).join('')}
+      </div>
+      ${cats.map(c => `
+        <div class="flower-row" style="grid-template-columns:60px 1fr 140px 110px">
+          <div style="font-size:20px;text-align:center">${c.emoji||'🌼'}</div>
+          <div><input class="form-input" value="${c.label||c.key}" onchange="renameCategory('${c.id}',this.value)" style="padding:6px 10px;font-size:13px"></div>
+          <div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer">
+              <input type="checkbox" ${c.enabled!==false?'checked':''} onchange="toggleCategory('${c.id}',this.checked)">
+              ${c.enabled!==false?'Видна на сайте':'Скрыта'}
+            </label>
+          </div>
+          <div><button class="ing-remove" onclick="deleteCategory('${c.id}')" title="Удалить">✕</button></div>
+        </div>`).join('')}
+      ${!cats.length?'<div class="empty"><p>Нет категорий</p></div>':''}
+    </div>
+    <div style="font-size:12px;color:var(--muted)">💡 Скрытая категория пропадает из выбора при создании букета и её букеты не показываются на сайте</div>`;
+}
+
+window.addCategory = async function() {
+  const label = document.getElementById('cat-new-label').value.trim();
+  let key = document.getElementById('cat-new-key').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  const emoji = document.getElementById('cat-new-emoji').value.trim() || '🌼';
+  if (!label) { showToast('❌ Введите название'); return; }
+  if (!key) key = 'cat_' + uid();
+  if (state.categories.some(c => c.key === key || c.id === key)) { showToast('❌ Такой ключ уже существует'); return; }
+  try {
+    await setDoc(doc(db, 'categories', key), { key, label, emoji, enabled: true });
+    showToast('✅ Категория добавлена');
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
+};
+
+window.renameCategory = async function(id, label) {
+  try {
+    await updateDoc(doc(db, 'categories', id), { label: label.trim() });
+    showToast('✅ Название обновлено');
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
+};
+
+window.toggleCategory = async function(id, enabled) {
+  try {
+    await updateDoc(doc(db, 'categories', id), { enabled });
+    showToast(enabled ? '✅ Категория показывается на сайте' : '🙈 Категория скрыта с сайта');
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
+};
+
+window.deleteCategory = async function(id) {
+  if (!confirm('Удалить категорию? Букеты в ней останутся, но категория пропадёт из списка.')) return;
+  await deleteDoc(doc(db, 'categories', id));
+  showToast('🗑 Категория удалена');
+};
+
 // ── FLOWERS ───────────────────────────────────────────────────────────────────
 function renderFlowers() {
   const catL = {flower:'Цветок', green:'Зелень', material:'Материал', cake:'Бенто-торт', berry:'Клубника'};
@@ -1062,31 +1181,69 @@ function renderFlowers() {
     </div>
 
     <div class="card">
-      <div style="display:grid;grid-template-columns:1fr 130px 110px 90px 32px;gap:10px;padding:8px 0 10px;border-bottom:2px solid var(--border)">
-        ${['Название','Цена / ед.','Наценка','Тип',''].map(h=>`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${h}</div>`).join('')}
+      <div style="display:grid;grid-template-columns:1fr 130px 110px 90px 32px 32px;gap:10px;padding:8px 0 10px;border-bottom:2px solid var(--border)">
+        ${['Название','Цена / ед.','Наценка','Тип','',''].map(h=>`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${h}</div>`).join('')}
       </div>
       ${sorted.map(f=>`
-        <div class="flower-row">
-          <div><div style="font-size:14px;font-weight:500">${f.name}</div><div style="font-size:11px;color:var(--muted)">за ${f.unit}</div></div>
-          <div><input class="form-input" type="number" value="${f.price}" min="0"
+        <div class="flower-row" style="${f.hidden?'opacity:.5':''}">
+          <div style="position:relative">
+            <input class="form-input" value="${f.name}" onchange="renameFlower('${f.id}',this.value)" style="padding:6px 26px 6px 10px;font-size:13px;font-weight:500">
+            <span class="fl-save-icon" id="fl-save-name-${f.id}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none">💾</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">за ${f.unit}${f.hidden?' · 🙈 скрыт':''}</div>
+          </div>
+          <div style="position:relative"><input class="form-input" type="number" value="${f.price}" min="0"
             onchange="updateFlower('${f.id}','price',this.value)"
-            style="padding:6px 10px;font-size:13px"></div>
-          <div><input class="form-input" type="number" value="${f.markup||0}" min="0"
+            style="padding:6px 26px 6px 10px;font-size:13px">
+            <span class="fl-save-icon" id="fl-save-price-${f.id}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none">💾</span></div>
+          <div style="position:relative"><input class="form-input" type="number" value="${f.markup||0}" min="0"
             onchange="updateFlower('${f.id}','markup',this.value)"
-            style="padding:6px 10px;font-size:13px"></div>
+            style="padding:6px 26px 6px 10px;font-size:13px">
+            <span class="fl-save-icon" id="fl-save-markup-${f.id}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none">💾</span></div>
           <div><span class="tag ${catC[f.cat]||'tag-blue'}">${catL[f.cat]||f.cat||'—'}</span></div>
+          <div><button class="ing-remove" onclick="toggleFlHidden('${f.id}',${!f.hidden})" title="${f.hidden?'Показать (вернуть в букеты)':'Скрыть — скроет и все букеты с этим цветком'}">${f.hidden?'👁':'🙈'}</button></div>
           <div><button class="ing-remove" onclick="deleteFl('${f.id}')" title="Удалить">✕</button></div>
         </div>`).join('')}
       ${!state.flowers.length?'<div class="empty"><p>Нет позиций</p></div>':''}
     </div>
-    <div style="font-size:12px;color:var(--muted)">💡 Изменение цены сразу пересчитывает все букеты с включённым автопересчётом</div>`;
+    <div style="font-size:12px;color:var(--muted)">💡 Изменение цены сразу пересчитывает все букеты с включённым автопересчётом. Скрытие цветка также скрывает с сайта все букеты/торты/сеты, где он используется.</div>`;
 }
 
+window.renameFlower = async function(id, name) {
+  const icon = document.getElementById(`fl-save-name-${id}`);
+  name = name.trim();
+  if (!name) { showToast('❌ Название не может быть пустым'); return; }
+  if (icon) { icon.textContent = '⏳'; icon.style.opacity = '1'; }
+  try {
+    await updateDoc(doc(db, 'flowers', id), { name });
+    showToast('✅ Название обновлено');
+    if (icon) { icon.textContent = '💾'; setTimeout(() => { icon.style.opacity = '0'; }, 1200); }
+  } catch(e) {
+    showToast('❌ ' + e.message, 4000);
+    if (icon) { icon.textContent = '⚠️'; setTimeout(() => { icon.style.opacity = '0'; }, 2000); }
+  }
+};
+
+window.toggleFlHidden = async function(id, hidden) {
+  try {
+    await updateDoc(doc(db, 'flowers', id), { hidden });
+    showToast(hidden ? '🙈 Цветок скрыт — букеты с ним тоже скрыты с сайта' : '👁 Цветок снова виден');
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
+};
+
 window.updateFlower = async function(id, field, val) {
+  const icon = document.getElementById(`fl-save-${field}-${id}`);
+  if (icon) { icon.textContent = '⏳'; icon.style.opacity = '1'; }
   try {
     await updateDoc(doc(db, 'flowers', id), { [field]: parseInt(val) || 0 });
     showToast('✅ Цена обновлена — букеты пересчитаны');
-  } catch(e) { showToast('❌ ' + e.message, 4000); }
+    if (icon) {
+      icon.textContent = '💾';
+      setTimeout(() => { icon.style.opacity = '0'; }, 1200);
+    }
+  } catch(e) {
+    showToast('❌ ' + e.message, 4000);
+    if (icon) { icon.textContent = '⚠️'; setTimeout(() => { icon.style.opacity = '0'; }, 2000); }
+  }
 };
 
 window.openFl = function() {
