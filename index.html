@@ -110,6 +110,17 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 .upload-zone:hover{border-color:var(--plum-light);background:rgba(107,78,107,0.04)}
 .upload-zone input{display:none}
 
+/* MULTI-PHOTO GRID */
+.photo-tile{position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1px solid var(--border);cursor:grab;background:var(--soft)}
+.photo-tile img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.photo-tile.dragging{opacity:.4}
+.photo-tile.drag-over{outline:2px solid var(--plum-light);outline-offset:-2px}
+.photo-tile-main{position:absolute;top:4px;left:4px;background:rgba(61,43,61,0.75);color:#fff;font-size:9px;font-weight:600;letter-spacing:.04em;padding:2px 6px;border-radius:100px;pointer-events:none}
+.photo-tile-remove{position:absolute;top:4px;right:4px;background:rgba(61,43,61,0.75);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.photo-tile-remove:hover{background:var(--red)}
+.photo-add-tile{aspect-ratio:1/1;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .15s;background:var(--soft);color:var(--muted);font-size:11px;text-align:center}
+.photo-add-tile:hover{border-color:var(--plum-light);background:rgba(107,78,107,0.04)}
+
 /* FLOWER TABLE */
 .flower-row{display:grid;grid-template-columns:1fr 130px 110px 90px 32px 32px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(61,43,61,0.06)}
 .flower-row:last-child{border:none}
@@ -171,7 +182,7 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 <div class="app" id="app" style="display:none">
   <aside class="sidebar">
     <a class="sidebar-logo" href="#" onclick="navigate('bouquets');return false">FLOMART<span>Панель управления</span></a>
-    <a class="nav-item" href="https://altynbekaraucaria.github.io/adminflomart/" target="_blank" rel="noopener" style="text-decoration:none"><span class="nav-icon">🌐</span> Перейти на сайт</a>
+    <a class="nav-item" href="https://altynbekaraucaria.github.io/webflomart/" target="_blank" rel="noopener" style="text-decoration:none"><span class="nav-icon">🌐</span> Перейти на сайт</a>
     <div class="nav-section">Каталог</div>
     <div class="nav-item active" data-page="bouquets" onclick="navigate('bouquets')"><span class="nav-icon">💐</span> Букеты <span class="badge" id="badge-bouquets">0</span></div>
     <div class="nav-item" data-page="cakes" onclick="navigate('cakes')"><span class="nav-icon">🎂</span> Бенто-торты <span class="badge" id="badge-cakes">0</span></div>
@@ -211,15 +222,11 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     <div class="form-group"><label class="form-label">Название</label><input class="form-input" id="bq-name" placeholder="Букет А2"></div>
     <div class="form-group"><label class="form-label">Описание (видно клиенту)</label><textarea class="form-textarea" id="bq-desc" placeholder="Нежный сборный букет…"></textarea></div>
     <div class="form-group">
-      <label class="form-label">Фото</label>
-      <div class="upload-zone" onclick="document.getElementById('bq-file').click()">
-        <input type="file" id="bq-file" accept="image/*" onchange="handleBqPhoto(this)">
-        <div id="bq-upload-preview">
-          <div style="font-size:32px;margin-bottom:8px">📷</div>
-          <div style="font-size:13px;color:var(--muted)">Нажмите для загрузки фото</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG до 10 МБ</div>
-        </div>
-      </div>
+      <label class="form-label" style="display:flex;align-items:center;gap:8px">
+        Фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(до 5 шт. — перетаскивайте мышкой, чтобы поменять порядок; первое фото — главное на сайте)</span>
+      </label>
+      <div id="bq-photos-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
+      <input type="file" id="bq-file" accept="image/*" multiple style="display:none" onchange="handleBqPhotos(this)">
     </div>
     <div class="form-group">
       <label class="form-label" style="display:flex;align-items:center;gap:8px">
@@ -413,7 +420,8 @@ const DEFAULT_CATEGORIES = [
 let categoriesSeeded = false;
 let currentPage = 'bouquets';
 let editingId = null;
-let pendingBqFile = null;
+let bqPhotos = []; // [{url, file?, publicId?, isNew?}] up to 5, in display order
+let dragBqIndex = null;
 let pendingCkFile = null;
 let pendingBrFile = null;
 let ingredientRows = [];
@@ -632,8 +640,16 @@ window.filterBq = function(cat, btn) {
 
 // ── BOUQUET MODAL ─────────────────────────────────────────────────────────────
 window.openBq = function(id) {
-  editingId = id; pendingBqFile = null;
+  editingId = id;
   const b = id ? state.bouquets.find(x => x.id === id) : null;
+  if (b?.photos?.length) {
+    bqPhotos = b.photos.map(p => ({ url: p.url, publicId: p.publicId }));
+  } else if (b?.photoUrl) {
+    bqPhotos = [{ url: b.photoUrl, publicId: b.photoPublicId }];
+  } else {
+    bqPhotos = [];
+  }
+  renderBqPhotos();
   ingredientRows = b?.ingredients ? JSON.parse(JSON.stringify(b.ingredients)) : [];
 
   document.getElementById('modal-bouquet-title').textContent = id ? 'Редактировать букет' : 'Новый букет';
@@ -651,11 +667,6 @@ window.openBq = function(id) {
   document.getElementById('bq-category').value = b?.category || state.categories[0]?.key || 'mixed';
   document.getElementById('bq-price').disabled = !!b?.autoPrice;
   document.getElementById('price-breakdown').style.display = b?.autoPrice ? 'block' : 'none';
-
-  const prev = document.getElementById('bq-upload-preview');
-  prev.innerHTML = b?.photoUrl
-    ? `<img src="${b.photoUrl}" style="max-height:120px;border-radius:8px;object-fit:cover"><div style="font-size:11px;color:var(--muted);margin-top:6px">Текущее фото</div>`
-    : `<div style="font-size:32px;margin-bottom:8px">📷</div><div style="font-size:13px;color:var(--muted)">Нажмите для загрузки фото</div>`;
 
   renderIngredients();
   if (b?.autoPrice) updateBreakdown();
@@ -703,11 +714,71 @@ function updateBreakdown() {
   document.getElementById('bq-price').value = rounded || '';
 }
 
-window.handleBqPhoto = function(input) {
-  const f = input.files[0]; if (!f) return;
-  pendingBqFile = f;
-  document.getElementById('bq-upload-preview').innerHTML =
-    `<img src="${URL.createObjectURL(f)}" style="max-height:120px;border-radius:8px"><div style="font-size:11px;color:var(--muted);margin-top:6px">${f.name}</div>`;
+function renderBqPhotos() {
+  const grid = document.getElementById('bq-photos-grid');
+  if (!grid) return;
+  let html = bqPhotos.map((p, i) => `
+    <div class="photo-tile" draggable="true" data-idx="${i}"
+      ondragstart="bqPhotoDragStart(event,${i})" ondragover="bqPhotoDragOver(event,${i})"
+      ondragleave="bqPhotoDragLeave(event)" ondrop="bqPhotoDrop(event,${i})" ondragend="bqPhotoDragEnd(event)">
+      <img src="${p.url}" alt="">
+      ${i===0 ? '<div class="photo-tile-main">Главное</div>' : ''}
+      <button type="button" class="photo-tile-remove" onclick="removeBqPhoto(${i})" title="Удалить">✕</button>
+    </div>`).join('');
+  if (bqPhotos.length < 5) {
+    html += `<div class="photo-add-tile" onclick="document.getElementById('bq-file').click()">
+      <div style="font-size:20px">📷</div><div>Добавить<br>(${bqPhotos.length}/5)</div>
+    </div>`;
+  }
+  grid.innerHTML = html || `<div class="photo-add-tile" onclick="document.getElementById('bq-file').click()">
+      <div style="font-size:20px">📷</div><div>Добавить фото<br>(0/5)</div>
+    </div>`;
+}
+
+window.handleBqPhotos = function(input) {
+  const files = Array.from(input.files || []);
+  const room = 5 - bqPhotos.length;
+  if (room <= 0) { showToast('❌ Максимум 5 фото на букет'); input.value = ''; return; }
+  files.slice(0, room).forEach(f => {
+    bqPhotos.push({ url: URL.createObjectURL(f), file: f, isNew: true });
+  });
+  if (files.length > room) showToast(`⚠️ Добавлено только ${room} фото — лимит 5 шт.`);
+  input.value = '';
+  renderBqPhotos();
+};
+
+window.removeBqPhoto = function(i) {
+  bqPhotos.splice(i, 1);
+  renderBqPhotos();
+};
+
+window.bqPhotoDragStart = function(e, i) {
+  dragBqIndex = i;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(i));
+};
+window.bqPhotoDragOver = function(e, i) {
+  e.preventDefault();
+  if (dragBqIndex === null || dragBqIndex === i) return;
+  e.currentTarget.classList.add('drag-over');
+};
+window.bqPhotoDragLeave = function(e) {
+  e.currentTarget.classList.remove('drag-over');
+};
+window.bqPhotoDrop = function(e, i) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragBqIndex === null || dragBqIndex === i) return;
+  const [moved] = bqPhotos.splice(dragBqIndex, 1);
+  bqPhotos.splice(i, 0, moved);
+  dragBqIndex = null;
+  renderBqPhotos();
+};
+window.bqPhotoDragEnd = function(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.photo-tile.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragBqIndex = null;
 };
 
 window.saveBouquet = async function() {
@@ -730,22 +801,26 @@ window.saveBouquet = async function() {
       updatedAt: serverTimestamp(),
     };
 
-    if (editingId) {
-      const old = state.bouquets.find(b => b.id === editingId);
-      if (old?.photoUrl) data.photoUrl = old.photoUrl;
-      if (old?.photoPublicId) data.photoPublicId = old.photoPublicId;
-    }
-
-    if (pendingBqFile) {
-      btn.textContent = 'Загрузка фото…';
-      try {
-        const result = await uploadPhoto(pendingBqFile, 'flomart/bouquets');
-        data.photoUrl = result.url;
-        data.photoPublicId = result.publicId;
-      } catch(e) {
-        showToast('⚠️ Фото не загрузилось: ' + e.message, 4000);
+    if (bqPhotos.some(p => p.isNew)) {
+      btn.textContent = `Загрузка фото 0/${bqPhotos.filter(p=>p.isNew).length}…`;
+      let uploaded = 0, toUpload = bqPhotos.filter(p=>p.isNew).length;
+      for (const p of bqPhotos) {
+        if (!p.isNew) continue;
+        try {
+          const result = await uploadPhoto(p.file, 'flomart/bouquets');
+          p.url = result.url;
+          p.publicId = result.publicId;
+          p.isNew = false;
+          uploaded++;
+          btn.textContent = `Загрузка фото ${uploaded}/${toUpload}…`;
+        } catch(e) {
+          showToast('⚠️ Одно из фото не загрузилось: ' + e.message, 4000);
+        }
       }
     }
+    data.photos = bqPhotos.filter(p => !p.isNew).map(p => ({ url: p.url, publicId: p.publicId || null }));
+    data.photoUrl = data.photos[0]?.url || null;
+    data.photoPublicId = data.photos[0]?.publicId || null;
 
     btn.textContent = 'Сохраняем…';
     if (editingId) {
