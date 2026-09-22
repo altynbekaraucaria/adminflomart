@@ -79,7 +79,11 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 .bq-name{font-size:14px;font-weight:500;margin-bottom:4px}
 .bq-price{font-family:'Cormorant Garant',serif;font-size:20px;font-weight:400;color:var(--plum)}
 .bq-auto{font-size:10px;color:var(--green);margin-left:6px;font-family:'Inter'}
-.bq-actions{display:flex;gap:6px;margin-top:10px}
+.bq-actions{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.bq-actions .btn-edit{width:100%;justify-content:center}
+.bq-actions-row2{display:flex;align-items:center;gap:6px}
+.bq-actions-row2 .btn-icon{flex:1;justify-content:center;padding:6px 8px}
+.bq-drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:4px 6px;flex:0 0 auto}
 
 /* TAGS */
 .tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500}
@@ -513,12 +517,26 @@ function startListeners() {
 
   unsubs.push(onSnapshot(collection(db, 'cakes'), snap => {
     state.cakes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    state.cakes.sort((a,b) => {
+      const ao = a.order, bo = b.order;
+      if (ao != null && bo != null) return ao - bo;
+      if (ao != null) return -1;
+      if (bo != null) return 1;
+      return (a.name||'').localeCompare(b.name||'', 'ru');
+    });
     document.getElementById('badge-cakes').textContent = state.cakes.length;
     if (currentPage === 'cakes') renderCakes();
   }));
 
   unsubs.push(onSnapshot(collection(db, 'berries'), snap => {
     state.berries = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    state.berries.sort((a,b) => {
+      const ao = a.order, bo = b.order;
+      if (ao != null && bo != null) return ao - bo;
+      if (ao != null) return -1;
+      if (bo != null) return 1;
+      return (a.name||'').localeCompare(b.name||'', 'ru');
+    });
     document.getElementById('badge-berries').textContent = state.berries.length;
     if (currentPage === 'berries') renderBerries();
   }));
@@ -629,10 +647,12 @@ function bqCards(list) {
         <div class="bq-name">${b.name||'Без названия'}</div>
         <div class="bq-price">${price ? price.toLocaleString('ru') : '—'} <span style="font-size:12px;font-family:Inter;color:var(--muted)">тг</span>${b.autoPrice?'<span class="bq-auto">⟳ авто</span>':''}</div>
         <div class="bq-actions">
-          <span class="bq-drag-handle" title="Тащите за карточку, чтобы переставить" style="cursor:grab;color:var(--muted);font-size:14px;padding:4px 2px">⠿</span>
-          <button class="btn btn-outline btn-sm" onclick="openBq('${b.id}')">✏️ Изменить</button>
-          <button class="btn btn-outline btn-sm" onclick="toggleBqHidden('${b.id}',${!b.hidden})" title="${b.hidden?'Показать на сайте':'Скрыть с сайта'}">${b.hidden?'👁':'🙈'}</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteBq('${b.id}')">🗑</button>
+          <button class="btn btn-outline btn-sm btn-edit" onclick="openBq('${b.id}')">✏️ Изменить</button>
+          <div class="bq-actions-row2">
+            <span class="bq-drag-handle" title="Тащите за карточку, чтобы переставить">⠿</span>
+            <button class="btn btn-outline btn-sm btn-icon" onclick="toggleBqHidden('${b.id}',${!b.hidden})" title="${b.hidden?'Показать на сайте':'Скрыть с сайта'}">${b.hidden?'👁':'🙈'}</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteBq('${b.id}')" title="Удалить">🗑</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -931,23 +951,83 @@ function renderCakes() {
     <div class="bouquet-grid" id="ck-grid">${ckCards(state.cakes)}</div>`;
 }
 
+let ckCardsCurrentList = [];
+let dragCkCardIndex = null;
+
 function ckCards(list) {
+  ckCardsCurrentList = list.map(c => c.id);
   if (!list.length) return '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🎂</div><p>Добавьте первый дизайн!</p></div>';
-  return list.map(c => {
+  return list.map((c, i) => {
     const img = c.photoUrl ? `<img src="${c.photoUrl}" alt="${c.name}" loading="lazy">` : `<div style="font-size:40px;z-index:1">🎂</div>`;
-    return `<div class="bq-card">
+    return `<div class="bq-card" draggable="true" data-idx="${i}"
+      ondragstart="ckCardDragStart(event,${i})" ondragover="ckCardDragOver(event,${i})"
+      ondragleave="ckCardDragLeave(event)" ondrop="ckCardDrop(event,${i})" ondragend="ckCardDragEnd(event)"
+      title="Перетащите, чтобы изменить порядок на сайте">
       <div class="bq-img" onclick="openCk('${c.id}')" style="background:linear-gradient(145deg,#FDE8EF,#F5C8DA)">${img}<div class="bq-img-overlay">✏️</div></div>
       <div class="bq-body">
         <div class="bq-code">Начинка: ${c.filling||'Вупи Пай'}</div>
         <div class="bq-name">${c.name}</div>
         <div class="bq-price">${(c.price||5000).toLocaleString('ru')} <span style="font-size:12px;font-family:Inter;color:var(--muted)">тг</span></div>
         <div class="bq-actions">
-          <button class="btn btn-outline btn-sm" onclick="openCk('${c.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteCk('${c.id}')">🗑</button>
+          <button class="btn btn-outline btn-sm btn-edit" onclick="openCk('${c.id}')">✏️ Изменить</button>
+          <div class="bq-actions-row2">
+            <span class="bq-drag-handle" title="Тащите за карточку, чтобы переставить">⠿</span>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCk('${c.id}')" title="Удалить">🗑</button>
+          </div>
         </div>
       </div>
     </div>`;
   }).join('');
+}
+
+window.ckCardDragStart = function(e, i) {
+  dragCkCardIndex = i;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(i));
+};
+window.ckCardDragOver = function(e, i) {
+  e.preventDefault();
+  if (dragCkCardIndex === null || dragCkCardIndex === i) return;
+  e.currentTarget.classList.add('drag-over');
+};
+window.ckCardDragLeave = function(e) {
+  e.currentTarget.classList.remove('drag-over');
+};
+window.ckCardDrop = async function(e, i) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragCkCardIndex === null || dragCkCardIndex === i) return;
+  const ids = ckCardsCurrentList.slice();
+  const [movedId] = ids.splice(dragCkCardIndex, 1);
+  ids.splice(i, 0, movedId);
+  dragCkCardIndex = null;
+
+  const idToCk = new Map(state.cakes.map(c => [c.id, c]));
+  const grid = document.getElementById('ck-grid');
+  if (grid) grid.innerHTML = ckCards(ids.map(id => idToCk.get(id)).filter(Boolean));
+
+  await persistCkOrder(ids);
+};
+window.ckCardDragEnd = function(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.bq-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragCkCardIndex = null;
+};
+
+async function persistCkOrder(newOrderedIds) {
+  try {
+    const batch = writeBatch(db);
+    let changed = 0;
+    newOrderedIds.forEach((id, i) => {
+      const c = state.cakes.find(x => x.id === id);
+      if (c && c.order !== i) { batch.update(doc(db, 'cakes', id), { order: i }); changed++; }
+    });
+    if (changed) {
+      await batch.commit();
+      showToast('✅ Порядок сохранён');
+    }
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
 }
 
 window.openCk = function(id) {
@@ -1120,24 +1200,84 @@ function renderBerries() {
     <div class="bouquet-grid" id="br-grid">${brCards(state.berries)}</div>`;
 }
 
+let brCardsCurrentList = [];
+let dragBrCardIndex = null;
+
 function brCards(list) {
+  brCardsCurrentList = list.map(b => b.id);
   if (!list.length) return '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🍓</div><p>Добавьте первый сет!</p></div>';
-  return list.map(b => {
+  return list.map((b, i) => {
     const img = b.photoUrl ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy">` : `<div style="font-size:40px;z-index:1">🍓</div>`;
     const price = b.price ? b.price.toLocaleString('ru') + ' тг' : '—';
-    return `<div class="bq-card">
+    return `<div class="bq-card" draggable="true" data-idx="${i}"
+      ondragstart="brCardDragStart(event,${i})" ondragover="brCardDragOver(event,${i})"
+      ondragleave="brCardDragLeave(event)" ondrop="brCardDrop(event,${i})" ondragend="brCardDragEnd(event)"
+      title="Перетащите, чтобы изменить порядок на сайте">
       <div class="bq-img" onclick="openBr('${b.id}')" style="background:linear-gradient(145deg,#FFE8EE,#FFD0DA)">${img}<div class="bq-img-overlay">✏️</div></div>
       <div class="bq-body">
         <div class="bq-code">${b.subtitle||'Клубника в шоколаде'} · ${b.qty||'?'} ягод</div>
         <div class="bq-name">${b.name}</div>
         <div class="bq-price">${price}</div>
         <div class="bq-actions">
-          <button class="btn btn-outline btn-sm" onclick="openBr('${b.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteBr('${b.id}')">🗑</button>
+          <button class="btn btn-outline btn-sm btn-edit" onclick="openBr('${b.id}')">✏️ Изменить</button>
+          <div class="bq-actions-row2">
+            <span class="bq-drag-handle" title="Тащите за карточку, чтобы переставить">⠿</span>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteBr('${b.id}')" title="Удалить">🗑</button>
+          </div>
         </div>
       </div>
     </div>`;
   }).join('');
+}
+
+window.brCardDragStart = function(e, i) {
+  dragBrCardIndex = i;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(i));
+};
+window.brCardDragOver = function(e, i) {
+  e.preventDefault();
+  if (dragBrCardIndex === null || dragBrCardIndex === i) return;
+  e.currentTarget.classList.add('drag-over');
+};
+window.brCardDragLeave = function(e) {
+  e.currentTarget.classList.remove('drag-over');
+};
+window.brCardDrop = async function(e, i) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragBrCardIndex === null || dragBrCardIndex === i) return;
+  const ids = brCardsCurrentList.slice();
+  const [movedId] = ids.splice(dragBrCardIndex, 1);
+  ids.splice(i, 0, movedId);
+  dragBrCardIndex = null;
+
+  const idToBr = new Map(state.berries.map(b => [b.id, b]));
+  const grid = document.getElementById('br-grid');
+  if (grid) grid.innerHTML = brCards(ids.map(id => idToBr.get(id)).filter(Boolean));
+
+  await persistBrOrder(ids);
+};
+window.brCardDragEnd = function(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.bq-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragBrCardIndex = null;
+};
+
+async function persistBrOrder(newOrderedIds) {
+  try {
+    const batch = writeBatch(db);
+    let changed = 0;
+    newOrderedIds.forEach((id, i) => {
+      const b = state.berries.find(x => x.id === id);
+      if (b && b.order !== i) { batch.update(doc(db, 'berries', id), { order: i }); changed++; }
+    });
+    if (changed) {
+      await batch.commit();
+      showToast('✅ Порядок сохранён');
+    }
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
 }
 
 window.openBr = function(id) {
