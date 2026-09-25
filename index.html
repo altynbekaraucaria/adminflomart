@@ -461,6 +461,11 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     </div>
 
     <div class="form-group">
+      <label class="form-label">Надбавка (тг) <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">— за маршмеллоу, доп. украшения и т.п., впишите сумму вручную</span></label>
+      <input class="form-input" id="br-surcharge" type="number" placeholder="0" min="0" oninput="calcBerryPrice()">
+    </div>
+
+    <div class="form-group">
       <label class="form-label" style="display:flex;align-items:center;gap:8px">
         🔒 Состав / себестоимость
         <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">(не виден клиентам)</span>
@@ -1605,6 +1610,7 @@ window.openBr = function(id) {
   document.getElementById('br-subtitle-en').value = b?.subtitleEn || '';
   document.getElementById('br-desc-en').value = b?.descEn || '';
   document.getElementById('br-qty').value = b?.qty || '';
+  document.getElementById('br-surcharge').value = b?.surcharge || '';
   document.getElementById('br-price').value = b?.price || '';
   document.getElementById('br-auto-price').checked = !!b?.autoPrice;
   document.getElementById('br-price').disabled = !!b?.autoPrice;
@@ -1626,7 +1632,8 @@ window.openBr = function(id) {
 window.calcBerryPrice = function() {
   const qty = parseInt(document.getElementById('br-qty').value) || 0;
   const pricePerBerry = state.settings?.berryPrice || 1000;
-  if (qty > 0) document.getElementById('br-price').value = qty * pricePerBerry;
+  const surcharge = parseInt(document.getElementById('br-surcharge').value) || 0;
+  if (qty > 0) document.getElementById('br-price').value = qty * pricePerBerry + surcharge;
 };
 
 window.handleBrPhoto = function(input) {
@@ -1677,6 +1684,7 @@ window.saveBerry = async function() {
       subtitleEn: document.getElementById('br-subtitle-en').value.trim(),
       descEn: document.getElementById('br-desc-en').value.trim(),
       qty: parseInt(document.getElementById('br-qty').value) || 0,
+      surcharge: parseInt(document.getElementById('br-surcharge').value) || 0,
       price: parseInt(document.getElementById('br-price').value) || 0,
       autoPrice: document.getElementById('br-auto-price').checked,
       ingredients: brIngredientRows.filter(r => r.flowerId),
