@@ -216,7 +216,7 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     <h2 class="modal-title" id="modal-bouquet-title">Новый букет</h2>
     <div class="grid-2">
       <div class="form-group"><label class="form-label">Код (назначается автоматически)</label><input class="form-input" id="bq-code" readonly style="background:var(--soft);cursor:not-allowed" title="Код присваивается автоматически и закрепляется за букетом до удаления" placeholder="Т1"></div>
-      <div class="form-group"><label class="form-label">Категория</label>
+      <div class="form-group"><label class="form-label">Категория (основная) <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">— определяет код букета</span></label>
         <select class="form-select" id="bq-category" onchange="onBqCategoryChange(this.value)">
           <option value="tulips">🌷 Тюльпаны</option>
           <option value="roses">🌹 Розы</option>
@@ -224,6 +224,10 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
           <option value="premium">✨ Премиум</option>
         </select>
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Показывать также в категориях <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">(необязательно — букет останется и в основной)</span></label>
+      <div id="bq-extra-categories" style="display:flex;flex-wrap:wrap;gap:6px 16px"></div>
     </div>
     <div class="form-group"><label class="form-label">Название</label><input class="form-input" id="bq-name" placeholder="Букет А2"></div>
     <div class="form-group"><label class="form-label">Описание (видно клиенту)</label><textarea class="form-textarea" id="bq-desc" placeholder="Нежный сборный букет…"></textarea></div>
@@ -881,8 +885,9 @@ function nextBqCode(catKey) {
 }
 
 window.onBqCategoryChange = function(catKey) {
-  if (editingId) return; // code is locked once a bouquet has been created
-  document.getElementById('bq-code').value = nextBqCode(catKey);
+  if (!editingId) document.getElementById('bq-code').value = nextBqCode(catKey);
+  const checked = Array.from(document.querySelectorAll('.bq-extra-cat-cb:checked')).map(cb => cb.value);
+  renderBqExtraCategories(catKey, checked);
 };
 
 // Draft English translation for the site's language switch. Uses a free,
@@ -967,6 +972,21 @@ window.bulkTranslateAll = async function() {
   showToast(`✅ Переведено карточек: ${translated}${failed ? `, ошибок: ${failed}` : ''}. Проверьте и поправьте при необходимости.`, 6000);
 };
 
+function renderBqExtraCategories(primaryKey, existingCategories) {
+  const box = document.getElementById('bq-extra-categories');
+  if (!box) return;
+  const cats = state.categories.length ? state.categories : DEFAULT_CATEGORIES.map(c=>({...c,id:c.key}));
+  const checkedKeys = new Set(existingCategories.filter(k => k && k !== primaryKey));
+  box.innerHTML = cats
+    .filter(c => c.key !== primaryKey)
+    .map(c => `
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0">
+        <input type="checkbox" class="bq-extra-cat-cb" value="${c.key}" ${checkedKeys.has(c.key) ? 'checked' : ''}>
+        ${c.emoji||''} ${c.label||c.key}
+      </label>`)
+    .join('');
+}
+
 window.openBq = function(id) {
   editingId = id;
   const b = id ? state.bouquets.find(x => x.id === id) : null;
@@ -1000,6 +1020,7 @@ window.openBq = function(id) {
   }
   const selectedCat = b?.category || state.categories[0]?.key || 'mixed';
   document.getElementById('bq-category').value = selectedCat;
+  renderBqExtraCategories(selectedCat, b?.categories || []);
   // Code is auto-assigned once and then locked for the life of the bouquet;
   // a legacy bouquet with no code yet gets one generated now too.
   document.getElementById('bq-code').value = b?.code || nextBqCode(selectedCat);
@@ -1161,6 +1182,7 @@ window.saveBouquet = async function() {
       nameEn: document.getElementById('bq-name-en').value.trim(),
       descEn: document.getElementById('bq-desc-en').value.trim(),
       category: document.getElementById('bq-category').value,
+      categories: [document.getElementById('bq-category').value, ...Array.from(document.querySelectorAll('.bq-extra-cat-cb:checked')).map(cb => cb.value)],
       price: parseInt(document.getElementById('bq-price').value) || 0,
       salePrice: parseInt(document.getElementById('bq-sale-price').value) || 0,
       comboLabel: document.getElementById('bq-combo-label').value.trim(),
