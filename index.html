@@ -678,6 +678,7 @@ function startListeners() {
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
 function catEmoji(c) { return state.categories.find(x=>x.key===c)?.emoji || {tulips:'🌷',roses:'🌹',mixed:'💐',premium:'✨'}[c]||'💐'; }
+function bqCategories(b) { return (b.categories && b.categories.length) ? b.categories : [b.category]; }
 function catLabel(c) { return state.categories.find(x=>x.key===c)?.label || {tulips:'Тюльпаны',roses:'Розы',mixed:'Сборные',premium:'Премиум'}[c]||c; }
 function catTagClass(c) { return {tulips:'tag-rose',roses:'tag-rose',mixed:'tag-blue',premium:'tag-blue'}[c]||'tag-blue'; }
 function catEnabled(c) { const cat = state.categories.find(x=>x.key===c); return cat ? cat.enabled !== false : true; }
@@ -731,7 +732,7 @@ function renderBouquets() {
   const cats = state.categories.length ? state.categories : DEFAULT_CATEGORIES.map(c=>({...c,id:c.key}));
   const tabDefs = [
     ['all', `Все (${state.bouquets.length})`],
-    ...cats.map(c => [c.key, `${c.emoji||''} ${state.bouquets.filter(b=>b.category===c.key).length}${c.enabled===false?' 🙈':''}`]),
+    ...cats.map(c => [c.key, `${c.emoji||''} ${c.label||c.key} (${state.bouquets.filter(b=>bqCategories(b).includes(c.key)).length})${c.enabled===false?' 🙈':''}`]),
   ];
   document.getElementById('main-content').innerHTML = `
     <div class="page-header">
@@ -741,7 +742,7 @@ function renderBouquets() {
     <div class="tab-row">
       ${tabDefs.map(([cat,label]) => `<button class="tab-btn${bqFilter===cat?' active':''}" onclick="filterBq('${cat}',this)">${label}</button>`).join('')}
     </div>
-    <div class="bouquet-grid" id="bq-grid">${bqCards(bqFilter==='all' ? state.bouquets : state.bouquets.filter(b=>b.category===bqFilter))}</div>`;
+    <div class="bouquet-grid" id="bq-grid">${bqCards(bqFilter==='all' ? state.bouquets : state.bouquets.filter(b=>bqCategories(b).includes(bqFilter)))}</div>`;
 }
 
 function hasHiddenIngredient(item) {
@@ -770,7 +771,7 @@ function bqCards(list) {
       title="Перетащите, чтобы изменить порядок на сайте">
       <div class="bq-img" onclick="openBq('${b.id}')">${img}<div class="bq-img-overlay">✏️ Редактировать</div>${onSale?`<div style="position:absolute;top:8px;left:8px;background:var(--sale);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;box-shadow:0 3px 10px rgba(217,66,107,0.35);z-index:2">${hasSalePrice&&b.comboLabel?'🏷️🎁 Акция':hasSalePrice?'🏷️ Акция':'🎁 Комбо'}</div>`:''}</div>
       <div class="bq-body">
-        <div class="bq-code">${b.code||''} · ${catLabel(b.category)} ${isHidden?`<span class="tag tag-blue" style="margin-left:4px">🙈 ${autoHidden?'скрыт (цветок скрыт)':'скрыт'}</span>`:''}</div>
+        <div class="bq-code">${b.code||''} · ${bqCategories(b).map(catLabel).join(', ')} ${isHidden?`<span class="tag tag-blue" style="margin-left:4px">🙈 ${autoHidden?'скрыт (цветок скрыт)':'скрыт'}</span>`:''}</div>
         <div class="bq-name">${b.name||'Без названия'}</div>
         <div class="bq-price">${hasSalePrice
           ? `<span style="text-decoration:line-through;text-decoration-color:var(--sale);color:var(--muted);font-size:14px;margin-right:6px">${price.toLocaleString('ru')}</span><span style="color:var(--sale);font-weight:700;font-size:20px">${b.salePrice.toLocaleString('ru')}</span> <span style="font-size:12px;font-family:Inter;color:var(--sale);opacity:.75">тг</span>`
