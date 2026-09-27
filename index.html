@@ -862,7 +862,7 @@ window.filterBq = function(cat, btn) {
   bqFilter = cat;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const list = cat === 'all' ? state.bouquets : state.bouquets.filter(b => b.category === cat);
+  const list = cat === 'all' ? state.bouquets : state.bouquets.filter(b => bqCategories(b).includes(cat));
   document.getElementById('bq-grid').innerHTML = bqCards(list);
 };
 
