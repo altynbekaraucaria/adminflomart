@@ -310,9 +310,12 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     </div>
     <div class="form-group">
       <label class="form-label" style="display:flex;align-items:center;gap:8px">
-        🎁 Текст комбо-предложения (англ.) <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(необязательно — перевод строки выше для английской версии сайта)</span>
+        🎁 Текст комбо-предложения (англ.) <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(переводится автоматически при сохранении, если поле пустое — можно поправить вручную)</span>
       </label>
-      <input class="form-input" id="bq-combo-label-en" placeholder="Например: + Free bento cake">
+      <div style="display:flex;align-items:center;gap:10px">
+        <input class="form-input" id="bq-combo-label-en" placeholder="Например: + Free bento cake" style="flex:1">
+        <button type="button" class="btn btn-outline btn-sm" id="bq-combo-label-translate-btn" onclick="translateComboLabel()" style="white-space:nowrap">🔤 Перевести</button>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-bouquet')">Отмена</button>
@@ -947,7 +950,7 @@ window.bulkTranslateAll = async function() {
 
   let done = 0, translated = 0, failed = 0;
   const jobs = [
-    { items: state.bouquets, coll: 'bouquets', fields: [['name','nameEn'], ['desc','descEn']] },
+    { items: state.bouquets, coll: 'bouquets', fields: [['name','nameEn'], ['desc','descEn'], ['comboLabel','comboLabelEn']] },
     { items: state.cakes, coll: 'cakes', fields: [['name','nameEn'], ['desc','descEn']] },
     { items: state.berries, coll: 'berries', fields: [['name','nameEn'], ['subtitle','subtitleEn'], ['desc','descEn']] },
     { items: state.categories, coll: 'categories', fields: [['label','labelEn']] },
@@ -1183,6 +1186,13 @@ window.saveBouquet = async function() {
 
   try {
     const auto = document.getElementById('bq-auto-price').checked;
+    const comboLabel = document.getElementById('bq-combo-label').value.trim();
+    let comboLabelEn = document.getElementById('bq-combo-label-en').value.trim();
+    if (comboLabel && !comboLabelEn) {
+      btn.textContent = 'Переводим…';
+      comboLabelEn = await mmTranslate(comboLabel);
+      document.getElementById('bq-combo-label-en').value = comboLabelEn;
+    }
     const data = {
       code: document.getElementById('bq-code').value.trim(),
       name,
@@ -1193,8 +1203,8 @@ window.saveBouquet = async function() {
       categories: [document.getElementById('bq-category').value, ...Array.from(document.querySelectorAll('.bq-extra-cat-cb:checked')).map(cb => cb.value)],
       price: parseInt(document.getElementById('bq-price').value) || 0,
       salePrice: parseInt(document.getElementById('bq-sale-price').value) || 0,
-      comboLabel: document.getElementById('bq-combo-label').value.trim(),
-      comboLabelEn: document.getElementById('bq-combo-label-en').value.trim(),
+      comboLabel,
+      comboLabelEn,
       autoPrice: auto,
       ingredients: ingredientRows.filter(r => r.flowerId),
       photoZoom: (parseInt(document.getElementById('bq-frame-zoom').value) || 100) / 100,
@@ -1854,6 +1864,28 @@ window.catDragEnd = function(e) {
   e.currentTarget.classList.remove('dragging');
   document.querySelectorAll('.flower-row.drag-over').forEach(el => el.classList.remove('drag-over'));
   dragCatIndex = null;
+};
+
+window.translateComboLabel = async function() {
+  const ru = document.getElementById('bq-combo-label').value.trim();
+  if (!ru) { showToast('❌ Сначала впишите текст комбо-предложения на русском'); return; }
+  const btn = document.getElementById('bq-combo-label-translate-btn');
+  const original = btn.textContent;
+  btn.textContent = '…'; btn.disabled = true;
+  try {
+    const t = await mmTranslate(ru);
+    if (t) {
+      document.getElementById('bq-combo-label-en').value = t;
+      showToast('✨ Переведено — можно поправить вручную');
+    } else {
+      showToast('⚠️ Не удалось перевести автоматически, впишите вручную');
+    }
+  } catch (e) {
+    showToast('⚠️ Сервис перевода недоступен, впишите вручную');
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
 };
 
 window.translateCategoryLabel = async function(id, btn) {
