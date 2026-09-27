@@ -308,6 +308,12 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
       </label>
       <input class="form-input" id="bq-combo-label" placeholder="Например: + Бенто-торт в подарок">
     </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px">
+        🎁 Текст комбо-предложения (англ.) <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(необязательно — перевод строки выше для английской версии сайта)</span>
+      </label>
+      <input class="form-input" id="bq-combo-label-en" placeholder="Например: + Free bento cake">
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-bouquet')">Отмена</button>
       <button class="btn btn-primary" id="bq-save-btn" onclick="saveBouquet()">💾 Сохранить</button>
@@ -1012,6 +1018,7 @@ window.openBq = function(id) {
   document.getElementById('bq-price').value = b?.price || '';
   document.getElementById('bq-sale-price').value = b?.salePrice || '';
   document.getElementById('bq-combo-label').value = b?.comboLabel || '';
+  document.getElementById('bq-combo-label-en').value = b?.comboLabelEn || '';
   document.getElementById('bq-auto-price').checked = !!b?.autoPrice;
   if (state.categories.length) {
     const catSel = document.getElementById('bq-category');
@@ -1187,6 +1194,7 @@ window.saveBouquet = async function() {
       price: parseInt(document.getElementById('bq-price').value) || 0,
       salePrice: parseInt(document.getElementById('bq-sale-price').value) || 0,
       comboLabel: document.getElementById('bq-combo-label').value.trim(),
+      comboLabelEn: document.getElementById('bq-combo-label-en').value.trim(),
       autoPrice: auto,
       ingredients: ingredientRows.filter(r => r.flowerId),
       photoZoom: (parseInt(document.getElementById('bq-frame-zoom').value) || 100) / 100,
