@@ -122,10 +122,11 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 .photo-tile.dragging{opacity:.4}
 .photo-tile.drag-over{outline:2px solid var(--plum-light);outline-offset:-2px}
 .photo-tile-main{position:absolute;top:4px;left:4px;background:rgba(61,43,61,0.75);color:#fff;font-size:9px;font-weight:600;letter-spacing:.04em;padding:2px 6px;border-radius:100px;pointer-events:none}
-.photo-tile-remove{position:absolute;top:4px;right:4px;background:rgba(61,43,61,0.75);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.photo-tile-remove{position:absolute;top:4px;right:4px;background:rgba(61,43,61,0.75);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .photo-tile-remove:hover{background:var(--red)}
-.photo-add-tile{aspect-ratio:1/1;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .15s;background:var(--soft);color:var(--muted);font-size:11px;text-align:center}
+.photo-add-tile{aspect-ratio:1/1;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all .15s;background:var(--soft);color:var(--muted);font-size:12px;text-align:center}
 .photo-add-tile:hover{border-color:var(--plum-light);background:rgba(107,78,107,0.04)}
+#bq-photos-grid.grid-drag-over{outline:2px dashed var(--plum-light);outline-offset:4px;background:rgba(107,78,107,0.04);border-radius:12px}
 
 /* FLOWER TABLE */
 .flower-row{display:grid;grid-template-columns:1fr 130px 110px 90px 32px 32px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(61,43,61,0.06)}
@@ -250,26 +251,27 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
       <label class="form-label" style="display:flex;align-items:center;gap:8px">
         Фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(до 5 шт. — перетаскивайте мышкой, чтобы поменять порядок; первое фото — главное на сайте)</span>
       </label>
-      <div id="bq-photos-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
+      <div id="bq-photos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:6px;transition:outline .15s,background .15s"
+        ondragover="bqGridDragOver(event)" ondragleave="bqGridDragLeave(event)" ondrop="bqGridDrop(event)"></div>
       <input type="file" id="bq-file" accept="image/*" multiple style="display:none" onchange="handleBqPhotos(this)">
     </div>
     <div class="form-group" id="bq-frame-group" style="display:none">
       <label class="form-label">Кадрирование главного фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(так фото будет обрезано в карточке на сайте — если вокруг букета слишком много фона, приблизьте и сдвиньте)</span></label>
       <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:8px">
-        <div id="bq-frame-preview" style="width:130px;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--soft);position:relative;flex-shrink:0">
-          <img id="bq-frame-preview-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+        <div id="bq-frame-preview" style="width:190px;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--soft);position:relative;flex-shrink:0">
+          <img id="bq-frame-preview-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;transition:transform .08s linear,object-position .08s linear">
         </div>
         <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px">
           <div>
-            <label style="font-size:11px;color:var(--muted)">Масштаб</label>
+            <label style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between"><span>Масштаб</span><span id="bq-frame-zoom-val">100%</span></label>
             <input type="range" id="bq-frame-zoom" min="100" max="250" value="100" oninput="updateBqFrame()" style="width:100%">
           </div>
           <div>
-            <label style="font-size:11px;color:var(--muted)">По горизонтали</label>
+            <label style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between"><span>По горизонтали</span><span id="bq-frame-x-val">50%</span></label>
             <input type="range" id="bq-frame-x" min="0" max="100" value="50" oninput="updateBqFrame()" style="width:100%">
           </div>
           <div>
-            <label style="font-size:11px;color:var(--muted)">По вертикали</label>
+            <label style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between"><span>По вертикали</span><span id="bq-frame-y-val">50%</span></label>
             <input type="range" id="bq-frame-y" min="0" max="100" value="50" oninput="updateBqFrame()" style="width:100%">
           </div>
           <button class="btn btn-outline btn-sm" onclick="resetBqFrame()" style="align-self:flex-start">↺ Сбросить</button>
@@ -1237,7 +1239,7 @@ function updateBqFrame() {
   const img = document.getElementById('bq-frame-preview-img');
   const url = bqPhotos[0]?.url;
   if (url) {
-    img.src = url;
+    if (img.getAttribute('src') !== url) img.src = url;
     img.style.display = 'block';
     img.style.objectPosition = `${x}% ${y}%`;
     img.style.transform = `scale(${zoom/100})`;
@@ -1245,6 +1247,9 @@ function updateBqFrame() {
   } else {
     img.style.display = 'none';
   }
+  const zv = document.getElementById('bq-frame-zoom-val'); if (zv) zv.textContent = `${zoom}%`;
+  const xv = document.getElementById('bq-frame-x-val'); if (xv) xv.textContent = `${x}%`;
+  const yv = document.getElementById('bq-frame-y-val'); if (yv) yv.textContent = `${y}%`;
 }
 
 window.resetBqFrame = function() {
@@ -1254,16 +1259,39 @@ window.resetBqFrame = function() {
   updateBqFrame();
 };
 
-window.handleBqPhotos = function(input) {
-  const files = Array.from(input.files || []);
+function addBqFiles(fileList) {
+  const files = Array.from(fileList || []).filter(f => f.type && f.type.startsWith('image/'));
+  if (!files.length) return;
   const room = 5 - bqPhotos.length;
-  if (room <= 0) { showToast('❌ Максимум 5 фото на букет'); input.value = ''; return; }
+  if (room <= 0) { showToast('❌ Максимум 5 фото на букет'); return; }
   files.slice(0, room).forEach(f => {
     bqPhotos.push({ url: URL.createObjectURL(f), file: f, isNew: true });
   });
   if (files.length > room) showToast(`⚠️ Добавлено только ${room} фото — лимит 5 шт.`);
-  input.value = '';
   renderBqPhotos();
+}
+
+window.handleBqPhotos = function(input) {
+  addBqFiles(input.files);
+  input.value = '';
+};
+
+window.bqGridDragOver = function(e) {
+  e.preventDefault();
+  if (dragBqIndex !== null) return; // reordering existing tile, not a file drop
+  e.dataTransfer.dropEffect = 'copy';
+  document.getElementById('bq-photos-grid').classList.add('grid-drag-over');
+};
+window.bqGridDragLeave = function(e) {
+  if (e.currentTarget.contains(e.relatedTarget)) return;
+  e.currentTarget.classList.remove('grid-drag-over');
+};
+window.bqGridDrop = function(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('grid-drag-over');
+  if (dragBqIndex !== null) return; // handled by bqPhotoDrop (reordering)
+  const files = e.dataTransfer?.files;
+  if (files && files.length) addBqFiles(files);
 };
 
 window.removeBqPhoto = function(i) {
