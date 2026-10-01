@@ -251,7 +251,7 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
       <label class="form-label" style="display:flex;align-items:center;gap:8px">
         Фото <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(до 5 шт. — перетаскивайте мышкой, чтобы поменять порядок; первое фото — главное на сайте)</span>
       </label>
-      <div id="bq-photos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:6px;transition:outline .15s,background .15s"
+      <div id="bq-photos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,140px));gap:10px;padding:6px;transition:outline .15s,background .15s"
         ondragover="bqGridDragOver(event)" ondragleave="bqGridDragLeave(event)" ondrop="bqGridDrop(event)"></div>
       <input type="file" id="bq-file" accept="image/*" multiple style="display:none" onchange="handleBqPhotos(this)">
     </div>
