@@ -1174,7 +1174,8 @@ window.openBq = function(id) {
   document.getElementById('bq-sale-price').value = b?.salePrice || '';
   document.getElementById('bq-combo-label').value = b?.comboLabel || '';
   document.getElementById('bq-combo-label-en').value = b?.comboLabelEn || '';
-  document.getElementById('bq-auto-price').checked = !!b?.autoPrice;
+  const bqAutoPriceDefault = b ? !!b.autoPrice : true; // new bouquet: pre-checked by default
+  document.getElementById('bq-auto-price').checked = bqAutoPriceDefault;
   if (state.categories.length) {
     const catSel = document.getElementById('bq-category');
     catSel.innerHTML = state.categories.map(c =>
@@ -1187,11 +1188,11 @@ window.openBq = function(id) {
   // Code is auto-assigned once and then locked for the life of the bouquet;
   // a legacy bouquet with no code yet gets one generated now too.
   document.getElementById('bq-code').value = b?.code || nextBqCode(selectedCat);
-  document.getElementById('bq-price').disabled = !!b?.autoPrice;
-  document.getElementById('price-breakdown').style.display = b?.autoPrice ? 'block' : 'none';
+  document.getElementById('bq-price').disabled = bqAutoPriceDefault;
+  document.getElementById('price-breakdown').style.display = bqAutoPriceDefault ? 'block' : 'none';
 
   renderIngredients();
-  if (b?.autoPrice) updateBreakdown();
+  if (bqAutoPriceDefault) updateBreakdown();
   openModal('modal-bouquet');
 };
 
@@ -1541,9 +1542,10 @@ window.openCk = function(id) {
   document.getElementById('ck-desc-en').value = c?.descEn || '';
   document.getElementById('ck-filling').value = c?.filling || 'Вупи Пай';
   document.getElementById('ck-price').value = c?.price || 5000;
-  document.getElementById('ck-auto-price').checked = !!c?.autoPrice;
-  document.getElementById('ck-price').disabled = !!c?.autoPrice;
-  document.getElementById('ck-price-breakdown').style.display = c?.autoPrice ? 'block' : 'none';
+  const ckAutoPriceDefault = c ? !!c.autoPrice : true; // new cake: pre-checked by default
+  document.getElementById('ck-auto-price').checked = ckAutoPriceDefault;
+  document.getElementById('ck-price').disabled = ckAutoPriceDefault;
+  document.getElementById('ck-price-breakdown').style.display = ckAutoPriceDefault ? 'block' : 'none';
   document.getElementById('ck-upload-preview').innerHTML = c?.photoUrl
     ? `<img src="${c.photoUrl}" style="max-height:120px;border-radius:8px">`
     : `<div style="font-size:32px;margin-bottom:8px">📷</div><div style="font-size:13px;color:var(--muted)">Нажмите для загрузки фото</div>`;
@@ -1837,9 +1839,10 @@ window.openBr = function(id) {
   document.getElementById('br-qty').value = b?.qty || '';
   document.getElementById('br-surcharge').value = b?.surcharge || '';
   document.getElementById('br-price').value = b?.price || '';
-  document.getElementById('br-auto-price').checked = !!b?.autoPrice;
-  document.getElementById('br-price').disabled = !!b?.autoPrice;
-  document.getElementById('br-price-breakdown').style.display = b?.autoPrice ? 'block' : 'none';
+  const brAutoPriceDefault = b ? !!b.autoPrice : true; // new berry set: pre-checked by default
+  document.getElementById('br-auto-price').checked = brAutoPriceDefault;
+  document.getElementById('br-price').disabled = brAutoPriceDefault;
+  document.getElementById('br-price-breakdown').style.display = brAutoPriceDefault ? 'block' : 'none';
   document.getElementById('br-preview').innerHTML = b?.photoUrl
     ? `<img src="${b.photoUrl}" style="max-height:120px;border-radius:8px">`
     : `<div style="font-size:32px;margin-bottom:8px">🍓</div><div style="font-size:13px;color:var(--muted)">Нажмите для загрузки фото</div>`;
