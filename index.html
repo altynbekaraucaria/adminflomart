@@ -1278,6 +1278,11 @@ function updateBqFrame() {
   const xv = document.getElementById('bq-frame-x-val'); if (xv) xv.textContent = `${x}%`;
   const yv = document.getElementById('bq-frame-y-val'); if (yv) yv.textContent = `${y}%`;
 }
+// Exposed on window because this is a <script type="module">: top-level function
+// declarations are module-scoped, not global, so the inline oninput="updateBqFrame()"
+// attribute on the sliders can't see a bare `function updateBqFrame(){}` — it needs
+// to be a property of window to be reachable from inline HTML event handlers.
+window.updateBqFrame = updateBqFrame;
 
 window.resetBqFrame = function() {
   document.getElementById('bq-frame-zoom').value = 100;
@@ -1660,6 +1665,7 @@ function updateCkFrame() {
     img.style.display = 'none';
   }
 }
+window.updateCkFrame = updateCkFrame;
 
 window.resetCkFrame = function() {
   document.getElementById('ck-frame-zoom').value = 100;
@@ -1881,6 +1887,7 @@ function updateBrFrame() {
     img.style.display = 'none';
   }
 }
+window.updateBrFrame = updateBrFrame;
 
 window.resetBrFrame = function() {
   document.getElementById('br-frame-zoom').value = 100;
