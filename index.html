@@ -193,6 +193,7 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     <div class="nav-item active" data-page="bouquets" onclick="navigate('bouquets')"><span class="nav-icon">💐</span> Букеты <span class="badge" id="badge-bouquets">0</span></div>
     <div class="nav-item" data-page="cakes" onclick="navigate('cakes')"><span class="nav-icon">🎂</span> Бенто-торты <span class="badge" id="badge-cakes">0</span></div>
     <div class="nav-item" data-page="berries" onclick="navigate('berries')"><span class="nav-icon">🍓</span> Клубника <span class="badge" id="badge-berries">0</span></div>
+    <div class="nav-item" data-page="promo" onclick="navigate('promo')"><span class="nav-icon">🏷️</span> Акции на главной <span class="badge" id="badge-promo">0</span></div>
     <div class="nav-section">Управление</div>
     <div class="nav-item" data-page="categories" onclick="navigate('categories')"><span class="nav-icon">🏷️</span> Категории</div>
     <div class="nav-item" data-page="flowers" onclick="navigate('flowers')"><span class="nav-icon">🌸</span> Цветы и цены</div>
@@ -624,8 +625,10 @@ function startListeners() {
       return (a.code||'').localeCompare(b.code||'', 'ru');
     });
     document.getElementById('badge-bouquets').textContent = state.bouquets.length;
+    document.getElementById('badge-promo').textContent = promoItems().length;
     if (currentPage === 'bouquets') renderBouquets();
     if (currentPage === 'prices') renderPrices();
+    if (currentPage === 'promo') renderPromo();
   }));
 
   unsubs.push(onSnapshot(collection(db, 'flowers'), snap => {
@@ -731,7 +734,7 @@ window.navigate = function(page) {
   document.querySelectorAll('.nav-item').forEach(el =>
     el.classList.toggle('active', el.dataset.page === page)
   );
-  ({ bouquets: renderBouquets, cakes: renderCakes, flowers: renderFlowers, prices: renderPrices, export: renderExport, berries: renderBerries, categories: renderCategories }[page] || renderBouquets)();
+  ({ bouquets: renderBouquets, cakes: renderCakes, flowers: renderFlowers, prices: renderPrices, export: renderExport, berries: renderBerries, categories: renderCategories, promo: renderPromo }[page] || renderBouquets)();
 };
 
 // ── BOUQUETS ──────────────────────────────────────────────────────────────────
@@ -752,6 +755,126 @@ function renderBouquets() {
       ${tabDefs.map(([cat,label]) => `<button class="tab-btn${bqFilter===cat?' active':''}" onclick="filterBq('${cat}',this)">${label}</button>`).join('')}
     </div>
     <div class="bouquet-grid" id="bq-grid">${bqCards(bqFilter==='all' ? state.bouquets : state.bouquets.filter(b=>bqCategories(b).includes(bqFilter)))}</div>`;
+}
+
+// ── PROMO ORDER (the "Акции" block on the homepage) ─────────────────────────
+// Which bouquets land here is automatic (sale price or a combo label), but
+// the ORDER they appear in on the site is controlled independently of their
+// order inside regular categories, via a dedicated promoOrder field.
+function promoItems() {
+  const items = state.bouquets.filter(b => (b.salePrice && b.salePrice < b.price) || b.comboLabel);
+  return items.slice().sort((a, b) => {
+    const ao = a.promoOrder, bo = b.promoOrder;
+    if (ao != null && bo != null) return ao - bo;
+    if (ao != null) return -1;
+    if (bo != null) return 1;
+    // Bouquets never manually reordered here yet fall back to their regular
+    // catalog order, so the page still has a sensible, stable starting look.
+    const go = a.order, gbo = b.order;
+    if (go != null && gbo != null) return go - gbo;
+    if (go != null) return -1;
+    if (gbo != null) return 1;
+    return (a.code || '').localeCompare(b.code || '', 'ru');
+  });
+}
+
+function renderPromo() {
+  const items = promoItems();
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div class="page-title">Акции на главной <span>${items.length} позиций</span></div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+      Здесь — все букеты, которые сейчас попадают в блок «Акции» на главной странице сайта (указана акционная цена или текст комбо-предложения). Перетаскивайте карточки за ⠿, чтобы изменить порядок их показа посетителям — на порядок внутри обычных категорий это не влияет.
+    </div>
+    <div class="bouquet-grid" id="promo-grid-admin">${promoCards(items)}</div>`;
+}
+
+let promoCardsCurrentList = [];
+let dragPromoCardIndex = null;
+
+function promoCards(list) {
+  promoCardsCurrentList = list.map(b => b.id);
+  if (!list.length) return '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏷️</div><p>Сейчас нет букетов с акционной ценой или комбо-предложением</p></div>';
+  return list.map((b, i) => {
+    const price = getPrice(b);
+    const hasSalePrice = b.salePrice && b.salePrice < price;
+    const fz = b.photoZoom || 1, fx = b.photoPosX != null ? b.photoPosX : 50, fy = b.photoPosY != null ? b.photoPosY : 50;
+    const img = b.photoUrl
+      ? `<img src="${b.photoUrl}" alt="${b.name}" loading="lazy" style="object-position:${fx}% ${fy}%;transform:scale(${fz});transform-origin:${fx}% ${fy}%;">`
+      : `<div style="font-size:40px;z-index:1">${catEmoji(b.category)}</div>`;
+    return `<div class="bq-card" style="border:2px solid var(--sale);box-shadow:0 6px 20px rgba(217,66,107,0.22);" draggable="true" data-idx="${i}"
+      ondragstart="promoCardDragStart(event,${i})" ondragover="promoCardDragOver(event,${i})"
+      ondragleave="promoCardDragLeave(event)" ondrop="promoCardDrop(event,${i})" ondragend="promoCardDragEnd(event)"
+      title="Перетащите, чтобы изменить порядок в блоке «Акции»">
+      <div class="bq-img" onclick="openBq('${b.id}')">${img}<div class="bq-img-overlay">✏️ Редактировать</div><div style="position:absolute;top:8px;left:8px;background:var(--sale);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;box-shadow:0 3px 10px rgba(217,66,107,0.35);z-index:2">${hasSalePrice&&b.comboLabel?'🏷️🎁 Акция':hasSalePrice?'🏷️ Акция':'🎁 Комбо'}</div></div>
+      <div class="bq-body">
+        <div class="bq-code">${b.code||''} · ${bqCategories(b).map(catLabel).join(', ')}</div>
+        <div class="bq-name">${b.name||'Без названия'}</div>
+        <div class="bq-price">${hasSalePrice
+          ? `<span style="text-decoration:line-through;text-decoration-color:var(--sale);color:var(--muted);font-size:14px;margin-right:6px">${price.toLocaleString('ru')}</span><span style="color:var(--sale);font-weight:700;font-size:20px">${b.salePrice.toLocaleString('ru')}</span> <span style="font-size:12px;font-family:Inter;color:var(--sale);opacity:.75">тг</span>`
+          : `${price ? price.toLocaleString('ru') : '—'} <span style="font-size:12px;font-family:Inter;color:var(--muted)">тг</span>`
+        }</div>
+        ${b.comboLabel?`<div style="font-size:12px;color:var(--sale);font-weight:500;margin-top:2px">🎁 ${b.comboLabel}</div>`:''}
+        <div class="bq-actions">
+          <button class="btn btn-outline btn-sm btn-edit" onclick="openBq('${b.id}')">✏️ Изменить</button>
+          <div class="bq-actions-row2">
+            <span class="bq-drag-handle" title="Тащите за карточку, чтобы переставить">⠿</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.promoCardDragStart = function(e, i) {
+  dragPromoCardIndex = i;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(i));
+};
+window.promoCardDragOver = function(e, i) {
+  e.preventDefault();
+  if (dragPromoCardIndex === null || dragPromoCardIndex === i) return;
+  e.currentTarget.classList.add('drag-over');
+};
+window.promoCardDragLeave = function(e) {
+  e.currentTarget.classList.remove('drag-over');
+};
+window.promoCardDrop = async function(e, i) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragPromoCardIndex === null || dragPromoCardIndex === i) return;
+  const ids = promoCardsCurrentList.slice();
+  const [movedId] = ids.splice(dragPromoCardIndex, 1);
+  ids.splice(i, 0, movedId);
+  dragPromoCardIndex = null;
+
+  const idToBq = new Map(state.bouquets.map(b => [b.id, b]));
+  const grid = document.getElementById('promo-grid-admin');
+  if (grid) grid.innerHTML = promoCards(ids.map(id => idToBq.get(id)).filter(Boolean));
+
+  await persistPromoOrder(ids);
+};
+window.promoCardDragEnd = function(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.bq-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragPromoCardIndex = null;
+};
+
+async function persistPromoOrder(newOrderedIds) {
+  try {
+    const batch = writeBatch(db);
+    let changed = 0;
+    newOrderedIds.forEach((id, i) => {
+      const b = state.bouquets.find(x => x.id === id);
+      if (b && b.promoOrder !== i) { batch.update(doc(db, 'bouquets', id), { promoOrder: i }); changed++; }
+    });
+    if (changed) {
+      await batch.commit();
+      showToast('✅ Порядок акций сохранён');
+    }
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
 }
 
 function hasHiddenIngredient(item) {
