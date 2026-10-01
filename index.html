@@ -1058,13 +1058,40 @@ window.autoTranslate = async function(fromId, toId, btn) {
 // using the same free translation API as the per-field "✨ Перевести"
 // button. Never overwrites a translation that's already there, so it's
 // safe to re-run after adding new items later.
+// Translates RU -> EN using Google's unofficial endpoint first (more reliable for
+// short phrases with symbols like "+", "%", emoji), falling back to MyMemory if
+// Google is unreachable or returns nothing useful. Either provider occasionally
+// echoes the input back unchanged or returns a quota-warning string instead of a
+// real translation — both are treated as failure so the caller gets '' and shows
+// the "перевести вручную" toast instead of silently saving garbage.
+async function mmTranslateGoogle(text) {
+  const res = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ru&tl=en&dt=t&q=' + encodeURIComponent(text));
+  const json = await res.json();
+  const out = Array.isArray(json?.[0]) ? json[0].map(seg => seg[0]).join('') : '';
+  return out.trim();
+}
+async function mmTranslateMyMemory(text) {
+  const res = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=ru|en');
+  const json = await res.json();
+  return (json?.responseData?.translatedText || '').trim();
+}
+function isUsableTranslation(out, original) {
+  if (!out) return false;
+  if (/mymemory warning|invalid source|quota/i.test(out)) return false;
+  if (out.toLowerCase() === String(original).trim().toLowerCase()) return false;
+  return true;
+}
 async function mmTranslate(text) {
   if (!text) return '';
   try {
-    const res = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=ru|en');
-    const json = await res.json();
-    return json?.responseData?.translatedText || '';
-  } catch (e) { return ''; }
+    const g = await mmTranslateGoogle(text);
+    if (isUsableTranslation(g, text)) return g;
+  } catch (e) { /* try fallback below */ }
+  try {
+    const m = await mmTranslateMyMemory(text);
+    if (isUsableTranslation(m, text)) return m;
+  } catch (e) { /* both failed */ }
+  return '';
 }
 
 window.bulkTranslateAll = async function() {
