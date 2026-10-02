@@ -114,8 +114,8 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
 .modal-backdrop.open{display:flex}
 .modal{background:#fff;border-radius:20px;padding:32px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;position:relative}
 .modal-title{font-family:'Cormorant Garant',serif;font-size:26px;font-weight:300;margin-bottom:24px}
-.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);padding:4px 8px;border-radius:8px;line-height:1}
-.modal-close:hover{background:var(--soft)}
+.modal-close{position:absolute;top:14px;right:14px;background:var(--soft);border:none;cursor:pointer;font-size:18px;color:var(--plum);width:38px;height:38px;border-radius:50%;line-height:1;display:flex;align-items:center;justify-content:center;z-index:1}
+.modal-close:hover{background:var(--border)}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
 
 /* INGREDIENTS */
@@ -195,7 +195,8 @@ body{font-family:'Inter',sans-serif;background:var(--soft);color:var(--plum);min
     background:var(--plum);padding:0 16px;z-index:150;
     padding-top:env(safe-area-inset-top);height:calc(56px + env(safe-area-inset-top));
   }
-  .mobile-topbar-burger{background:none;border:none;color:#fff;font-size:22px;padding:6px;line-height:1;cursor:pointer}
+  .mobile-topbar-burger{background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:26px;width:44px;height:44px;line-height:1;cursor:pointer;border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .modal-close{top:12px;right:12px;width:46px;height:46px;font-size:21px}
   .mobile-topbar-title{font-family:'Cormorant Garant',serif;font-size:19px;font-weight:300;letter-spacing:.1em;color:var(--rose)}
   .sidebar{
     display:flex;position:fixed;top:0;left:0;bottom:0;width:240px;z-index:201;
