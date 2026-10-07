@@ -1051,6 +1051,46 @@ async function persistBqOrder(newOrderedIds) {
   } catch(e) { showToast('❌ ' + e.message, 4000); }
 }
 
+// One-click bulk fix for "коды выглядят некрасиво / длинными цифрами" —
+// reassigns every bouquet's code to the short letter+number scheme
+// (same convention nextBqCode() already uses for brand-new bouquets),
+// in the bouquet's current catalog order. Safe to run more than once:
+// it just recomputes from scratch each time, so it stays correct after
+// bouquets are added, removed, or reordered.
+window.renumberAllBqCodes = async function() {
+  const btn = document.getElementById('renumber-codes-btn');
+  if (!confirm('Пересчитать коды у всех букетов? Старые коды (в т.ч. введённые вручную) будут заменены.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Пересчитываю...'; }
+  try {
+    const sorted = [...state.bouquets].sort((a, b) => {
+      const ao = a.order, bo = b.order;
+      if (ao != null && bo != null) return ao - bo;
+      if (ao != null) return -1;
+      if (bo != null) return 1;
+      return (a.code || '').localeCompare(b.code || '', 'ru');
+    });
+    const letterSeq = {};
+    const batch = writeBatch(db);
+    let changed = 0;
+    sorted.forEach(b => {
+      const primaryCat = (b.categories && b.categories.length) ? b.categories[0] : b.category;
+      const letter = catLetterFor(primaryCat);
+      letterSeq[letter] = (letterSeq[letter] || 0) + 1;
+      const newCode = letter + letterSeq[letter];
+      if (b.code !== newCode) {
+        batch.update(doc(db, 'bouquets', b.id), { code: newCode });
+        changed++;
+      }
+    });
+    if (changed) await batch.commit();
+    showToast(changed ? `✅ Обновлено кодов: ${changed}` : '✅ Коды уже в порядке, менять нечего');
+  } catch (e) {
+    showToast('❌ ' + e.message, 4000);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔢 Пересчитать коды всех букетов'; }
+  }
+};
+
 window.toggleBqHidden = async function(id, hidden) {
   try {
     await updateDoc(doc(db, 'bouquets', id), { hidden });
@@ -2079,6 +2119,13 @@ function renderCategories() {
         Одной кнопкой переведёт название и описание всех букетов, тортов и клубничных сетов, у которых ещё нет английского перевода (заполненные вручную поля не трогает). Перевод черновой — потом можно поправить у любой карточки.
       </div>
       <button class="btn btn-primary" id="bulk-translate-btn" onclick="bulkTranslateAll()">✨ Перевести весь каталог на English</button>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">🔢 Коды букетов</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Присвоит всем букетам короткий код: буква категории + порядковый номер (например, Р1, Р2, Т1...), в том же порядке, в каком букеты расположены в каталоге. Полезно, если у части букетов остались старые длинные коды. Можно нажимать повторно в любой момент — просто пересчитает заново.
+      </div>
+      <button class="btn btn-primary" id="renumber-codes-btn" onclick="renumberAllBqCodes()">🔢 Пересчитать коды всех букетов</button>
     </div>`;
 }
 
