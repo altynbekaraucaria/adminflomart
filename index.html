@@ -741,7 +741,12 @@ function startListeners() {
     snap.docs.forEach(d => { state.settings = {...state.settings, ...d.data()}; });
     state.settings.berryPrice = state.settings.berryPrice || 1000;
     state.settings.bentoPrice = state.settings.bentoPrice || 5000;
+    state.settings.watermarkText = state.settings.watermarkText || 'FLOMART';
+    state.settings.watermarkSize = state.settings.watermarkSize ?? 17;
+    state.settings.watermarkOffset = state.settings.watermarkOffset ?? 90;
+    state.settings.watermarkOpacity = state.settings.watermarkOpacity ?? 45;
     if (currentPage === 'prices') renderPrices();
+    if (currentPage === 'categories') renderCategories();
   }));
 }
 
@@ -2126,6 +2131,31 @@ function renderCategories() {
         Присвоит всем букетам короткий код: буква категории + порядковый номер (например, Р1, Р2, Т1...), в том же порядке, в каком букеты расположены в каталоге. Полезно, если у части букетов остались старые длинные коды. Можно нажимать повторно в любой момент — просто пересчитает заново.
       </div>
       <button class="btn btn-primary" id="renumber-codes-btn" onclick="renumberAllBqCodes()">🔢 Пересчитать коды всех букетов</button>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">💧 Водяной знак на фото</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Надпись, которая "впечатывается" в фото букета при открытии карточки на сайте (видна и в скачанном файле). На тортах не показывается.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Текст</label>
+          <input class="form-input" type="text" id="wm-text-input" value="${String(state.settings?.watermarkText || 'FLOMART').replace(/"/g,'&quot;')}" maxlength="40" style="padding:8px 12px;font-size:14px;width:100%;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Прозрачность, % (0 — невидимый, 100 — сплошной)</label>
+          <input class="form-input" type="number" id="wm-opacity-input" value="${state.settings?.watermarkOpacity ?? 45}" min="5" max="100" style="padding:8px 12px;font-size:14px;width:100%;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Размер текста, % от ширины фото</label>
+          <input class="form-input" type="number" id="wm-size-input" value="${state.settings?.watermarkSize ?? 17}" min="5" max="40" style="padding:8px 12px;font-size:14px;width:100%;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Высота от низа фото, % от размера текста</label>
+          <input class="form-input" type="number" id="wm-offset-input" value="${state.settings?.watermarkOffset ?? 90}" min="0" max="300" style="padding:8px 12px;font-size:14px;width:100%;">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="updateWatermarkSettings()">💾 Сохранить водяной знак</button>
     </div>`;
 }
 
@@ -2502,6 +2532,23 @@ window.updateBentoPrice = async function() {
     }
     showToast(`✅ ${val.toLocaleString('ru')} тг/торт — все бенто обновлены!`);
     renderPrices();
+  } catch(e) { showToast('❌ ' + e.message, 4000); }
+};
+
+window.updateWatermarkSettings = async function() {
+  const text = (document.getElementById('wm-text-input').value || 'FLOMART').trim() || 'FLOMART';
+  const opacity = Math.min(100, Math.max(5, parseInt(document.getElementById('wm-opacity-input').value) || 45));
+  const size = Math.min(40, Math.max(5, parseInt(document.getElementById('wm-size-input').value) || 17));
+  const offset = Math.min(300, Math.max(0, parseInt(document.getElementById('wm-offset-input').value) || 90));
+  try {
+    await setDoc(doc(db, 'settings', 'watermark'), {
+      watermarkText: text,
+      watermarkOpacity: opacity,
+      watermarkSize: size,
+      watermarkOffset: offset
+    });
+    showToast('✅ Водяной знак обновлён — проверьте на сайте через пару секунд');
+    renderCategories();
   } catch(e) { showToast('❌ ' + e.message, 4000); }
 };
 
