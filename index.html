@@ -609,6 +609,36 @@ const CLOUDINARY_PRESET = 'zwgmlesi';
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 let state = { bouquets: [], flowers: [], cakes: [], berries: [], categories: [] };
+// Watermark position the user has clicked in the grid but not yet saved —
+// null means "show whatever's saved in state.settings.watermarkPosition".
+// Kept outside renderCategories() so it survives the re-renders that happen
+// while the user is still picking (every click re-renders the whole page).
+let wmPendingPosition = null;
+function wmEffectivePosition() {
+  return wmPendingPosition !== null ? wmPendingPosition : (state.settings?.watermarkPosition || 'south');
+}
+// Mirrors window.cldUrl's watermark math on the website (webflomart/index.html)
+// so the admin preview shows exactly what customers will see. Keep the two in
+// sync if either one changes.
+function wmBuildPreviewUrl(url, text, opacity, size, offsetPct, position) {
+  const marker = '/image/upload/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url;
+  const before = url.slice(0, idx + marker.length);
+  const after = url.slice(idx + marker.length);
+  const baseW = 500;
+  const fontSize = Math.max(14, Math.round(baseW * (size / 100)));
+  const off = Math.max(6, Math.round(fontSize * (offsetPct / 100)));
+  const axisMap = {
+    north_west: { x: off, y: off }, north: { x: 0, y: off }, north_east: { x: off, y: off },
+    west: { x: off, y: 0 }, center: { x: 0, y: 0 }, east: { x: off, y: 0 },
+    south_west: { x: off, y: off }, south: { x: 0, y: off }, south_east: { x: off, y: off },
+  };
+  const { x, y } = axisMap[position] || axisMap.south;
+  const encodedText = encodeURIComponent(text);
+  const chain = `f_auto,q_auto,w_${baseW},c_limit/l_text:Arial_${fontSize}_bold:${encodedText},co_white,o_${opacity}/fl_layer_apply,g_${position},x_${x},y_${y}`;
+  return `${before}${chain}/${after}`;
+}
 const DEFAULT_CATEGORIES = [
   { key: 'tulips', label: 'Тюльпаны', labelEn: 'Tulips', emoji: '🌷', enabled: true, order: 0 },
   { key: 'roses', label: 'Розы', labelEn: 'Roses', emoji: '🌹', enabled: true, order: 1 },
@@ -745,6 +775,7 @@ function startListeners() {
     state.settings.watermarkSize = state.settings.watermarkSize ?? 17;
     state.settings.watermarkOffset = state.settings.watermarkOffset ?? 90;
     state.settings.watermarkOpacity = state.settings.watermarkOpacity ?? 45;
+    state.settings.watermarkPosition = state.settings.watermarkPosition || 'south';
     if (currentPage === 'prices') renderPrices();
     if (currentPage === 'categories') renderCategories();
   }));
@@ -2135,29 +2166,77 @@ function renderCategories() {
     <div class="card" style="margin-top:20px">
       <div class="card-title">💧 Водяной знак на фото</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
-        Надпись, которая "впечатывается" в фото букета при открытии карточки на сайте (видна и в скачанном файле). На тортах не показывается.
+        Надпись, которая "впечатывается" в фото букета при открытии карточки на сайте (видна и в скачанном файле). На тортах не показывается. Превью справа обновляется сразу, ещё до сохранения.
+      </div>
+      <div style="display:grid;grid-template-columns:150px 1fr;gap:20px;margin-bottom:16px;align-items:start;">
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Расположение</label>
+          <div id="wm-position-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:138px;background:var(--border,#e5dde2);padding:4px;border-radius:10px;">
+            ${['north_west','north','north_east','west','center','east','south_west','south','south_east'].map(pos => {
+              const active = wmEffectivePosition() === pos;
+              return `<button type="button" class="wm-pos-btn" data-pos="${pos}" onclick="setWatermarkPosition('${pos}')" title="${pos.replace(/_/g,' ')}" style="width:42px;height:42px;border:none;border-radius:6px;cursor:pointer;background:${active?'var(--plum)':'#fff'};color:${active?'#fff':'var(--muted)'};font-size:15px;display:flex;align-items:center;justify-content:center;">${pos==='center'?'●':''}</button>`;
+            }).join('')}
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Превью</label>
+          <div style="width:220px;aspect-ratio:1;border-radius:10px;overflow:hidden;background:linear-gradient(145deg,var(--rose,#f3d9e4),#d8b0c0);display:flex;align-items:center;justify-content:center;">
+            <img id="wm-preview-img" src="" alt="Превью водяного знака" style="width:100%;height:100%;object-fit:cover;display:none;">
+            <div id="wm-preview-placeholder" style="font-size:40px;">💐</div>
+          </div>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Текст</label>
-          <input class="form-input" type="text" id="wm-text-input" value="${String(state.settings?.watermarkText || 'FLOMART').replace(/"/g,'&quot;')}" maxlength="40" style="padding:8px 12px;font-size:14px;width:100%;">
+          <input class="form-input" type="text" id="wm-text-input" value="${String(state.settings?.watermarkText || 'FLOMART').replace(/"/g,'&quot;')}" maxlength="40" style="padding:8px 12px;font-size:14px;width:100%;" oninput="updateWatermarkPreview()">
         </div>
         <div>
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Прозрачность, % (0 — невидимый, 100 — сплошной)</label>
-          <input class="form-input" type="number" id="wm-opacity-input" value="${state.settings?.watermarkOpacity ?? 45}" min="5" max="100" style="padding:8px 12px;font-size:14px;width:100%;">
+          <input class="form-input" type="number" id="wm-opacity-input" value="${state.settings?.watermarkOpacity ?? 45}" min="5" max="100" style="padding:8px 12px;font-size:14px;width:100%;" oninput="updateWatermarkPreview()">
         </div>
         <div>
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Размер текста, % от ширины фото</label>
-          <input class="form-input" type="number" id="wm-size-input" value="${state.settings?.watermarkSize ?? 17}" min="5" max="40" style="padding:8px 12px;font-size:14px;width:100%;">
+          <input class="form-input" type="number" id="wm-size-input" value="${state.settings?.watermarkSize ?? 17}" min="5" max="40" style="padding:8px 12px;font-size:14px;width:100%;" oninput="updateWatermarkPreview()">
         </div>
         <div>
-          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Высота от низа фото, % от размера текста</label>
-          <input class="form-input" type="number" id="wm-offset-input" value="${state.settings?.watermarkOffset ?? 90}" min="0" max="300" style="padding:8px 12px;font-size:14px;width:100%;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Отступ от края, % от размера текста</label>
+          <input class="form-input" type="number" id="wm-offset-input" value="${state.settings?.watermarkOffset ?? 90}" min="0" max="300" style="padding:8px 12px;font-size:14px;width:100%;" oninput="updateWatermarkPreview()">
         </div>
       </div>
       <button class="btn btn-primary" onclick="updateWatermarkSettings()">💾 Сохранить водяной знак</button>
     </div>`;
+  updateWatermarkPreview();
 }
+
+window.setWatermarkPosition = function(pos) {
+  wmPendingPosition = pos;
+  document.querySelectorAll('.wm-pos-btn').forEach(btn => {
+    const active = btn.dataset.pos === pos;
+    btn.style.background = active ? 'var(--plum)' : '#fff';
+    btn.style.color = active ? '#fff' : 'var(--muted)';
+  });
+  updateWatermarkPreview();
+};
+
+window.updateWatermarkPreview = function() {
+  const img = document.getElementById('wm-preview-img');
+  const placeholder = document.getElementById('wm-preview-placeholder');
+  if (!img) return; // watermark card isn't on screen right now
+  const sample = state.bouquets.find(b => b.photoUrl) || state.cakes.find(c => c.photoUrl) || state.berries.find(b => b.photoUrl);
+  if (!sample) {
+    img.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'flex';
+    return;
+  }
+  const text = (document.getElementById('wm-text-input')?.value || 'FLOMART').trim() || 'FLOMART';
+  const opacity = Math.min(100, Math.max(5, parseInt(document.getElementById('wm-opacity-input')?.value) || 45));
+  const size = Math.min(40, Math.max(5, parseInt(document.getElementById('wm-size-input')?.value) || 17));
+  const offset = Math.min(300, Math.max(0, parseInt(document.getElementById('wm-offset-input')?.value) || 90));
+  img.src = wmBuildPreviewUrl(sample.photoUrl, text, opacity, size, offset, wmEffectivePosition());
+  img.style.display = 'block';
+  if (placeholder) placeholder.style.display = 'none';
+};
 
 window.catDragStart = function(e, i) {
   dragCatIndex = i;
@@ -2540,13 +2619,16 @@ window.updateWatermarkSettings = async function() {
   const opacity = Math.min(100, Math.max(5, parseInt(document.getElementById('wm-opacity-input').value) || 45));
   const size = Math.min(40, Math.max(5, parseInt(document.getElementById('wm-size-input').value) || 17));
   const offset = Math.min(300, Math.max(0, parseInt(document.getElementById('wm-offset-input').value) || 90));
+  const position = wmEffectivePosition();
   try {
     await setDoc(doc(db, 'settings', 'watermark'), {
       watermarkText: text,
       watermarkOpacity: opacity,
       watermarkSize: size,
-      watermarkOffset: offset
+      watermarkOffset: offset,
+      watermarkPosition: position
     });
+    wmPendingPosition = null;
     showToast('✅ Водяной знак обновлён — проверьте на сайте через пару секунд');
     renderCategories();
   } catch(e) { showToast('❌ ' + e.message, 4000); }
